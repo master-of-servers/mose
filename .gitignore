@@ -1,12 +1,26 @@
 # Binaries for programs and plugins
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
 
+# Misc
+.DS_Store
+knife.rb
+
 # Test binary, build with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# Binaries we generate
+mose
+chef-linux
+puppet-linux
+
+# Application-generated folders
+payloads/
+keys/
+
+# Packr files and directories
+packrd/
+main-packr.go
+params.go

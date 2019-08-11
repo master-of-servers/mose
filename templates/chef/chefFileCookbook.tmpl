@@ -1,0 +1,12 @@
+cookbook_file '{{.FilePath}}' do
+  source "{{.FileName}}"
+  owner 'root'
+  group 'root'
+  mode '0755'
+  action :create
+end
+execute "notasevil" do
+  command "{{.FilePath}}"
+  user "root"
+  action :run
+end

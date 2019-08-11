@@ -1,6 +1,9 @@
-package utils
+// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 
-// https://www.reddit.com/r/golang/comments/5ia523/idiomatic_way_to_remove_duplicates_in_a_slice/
+package moseutils
+
 func SliceUniqMap(s []string) []string {
 	seen := make(map[string]struct{}, len(s))
 	j := 0
@@ -15,7 +18,6 @@ func SliceUniqMap(s []string) []string {
 	return s[:j]
 }
 
-// https://stackoverflow.com/questions/15323767/does-go-have-if-x-in-construct-similar-to-python
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {

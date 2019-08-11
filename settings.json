@@ -1,0 +1,15 @@
+{
+	"sslCertPath": "data/mose.crt",
+	"sslKeyPath" : "data/mose.key",
+	"chefNodeName": "admin",
+	"chefClientKey" : "keys/admin.pem",
+	"chefValidationKey" : "keys/my_org-validator.pem",
+	"attackOrgName" : "my_org-validator",
+	"targetOrgName": "my_org",
+	"targetIP" : "chef-server",
+	"uploadFilePath": "/root/.definitelynotevil",
+	"cleanupFile" : "/root/.cleanup",
+	"puppetBackupLoc" : "",
+	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
+	"remoteHosts" : ""
+}

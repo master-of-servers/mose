@@ -1,0 +1,19 @@
+package main
+
+import (
+	"github.com/l50/mose/pkg/agent"
+)
+
+func CreateAgent() agent.Agent {
+	agent := agent.Agent{
+		BdCmd:      "{{.BdCmd}}",
+		LocalIP:    "{{.LocalIP}}",
+		OsTarget:   "{{.OsTarget}}",
+		PayloadName: "{{.PayloadName}}",
+		FileName:   "{{.UploadFilename}}",
+		FilePath:   "{{.UploadFilePath}}",
+		CleanupFile: "{{.CleanupFile}}",
+		PuppetBackupLoc: "{{.PuppetBackupLoc}}",
+	}
+	return agent
+}

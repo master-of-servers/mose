@@ -1,0 +1,7 @@
+[] Chef - Support multiple orgs 
+[] Chef - Support multiple organizations and multiple knife.rb files
+[] Chef - Move chefEnv and fileUploader to chefutils package 
+[] Puppet - Design way that you can run payload on specific systems (parse systems that exist, give list to operator and let them decide which systems to infect) 
+[] Chef - Add ability to backdoor an existing chef cookbook
+[] Puppet - Add ability to backdoor an existing puppet module
+[] Capability for a msf backdoor that sets up a metasploit listener and then leaves you in it
