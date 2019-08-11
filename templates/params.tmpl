@@ -1,0 +1,14 @@
+ package main
+
+ import (
+   "github.com/l50/mose/pkg/agent"
+ )
+
+ func CreateAgent() agent.Agent {
+   agent := agent.Agent{
+		 BdCmd:    "{{.BdCmd}}",
+		 OsTarget: "{{.OsTarget}}",
+     ModuleName: "{{.ModuleName}}",
+   }
+   return agent
+ }
