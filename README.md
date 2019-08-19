@@ -1,5 +1,6 @@
 # MOSE (Master Of SErvers)
 [![Dc27Badge](https://img.shields.io/badge/DEF%20CON-27-green)](https://defcon.org/html/defcon-27/dc-27-speakers.html#Grace)
+[![Go Report Card](https://goreportcard.com/badge/github.com/master-of-servers/MOSE)](https://goreportcard.com/badge/github.com/master-of-servers/MOSE)
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/master-of-servers/MOSE/blob/master/LICENSE)
 
 
