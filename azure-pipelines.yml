@@ -37,10 +37,10 @@ steps:
     packr2 clean
     packr2 build
     mkdir -p payloads
-    chmod +x mose
   displayName: Build MOSE
 
 - script: |
+    cd '$(modulePath)' 
     ls -lart
     ./mose -h
   displayName: 'Display CLI options for MOSE'
