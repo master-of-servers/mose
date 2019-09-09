@@ -2,7 +2,7 @@ trigger:
 - master
 
 pool:
-  vmImage: 'macOS-10.14'
+  vmImage: 'ubuntu-18.04'
 
 variables:
   GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
@@ -37,6 +37,10 @@ steps:
     packr2 clean
     packr2 build
     mkdir -p payloads
+     touch .env && echo "bla:bla" >> .env
+    ls -lart
+    ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f puppet-linux
+    ls -lart
   displayName: Build MOSE
 
 - script: |
