@@ -36,7 +36,8 @@ steps:
     go build
     packr2 clean
     packr2 build
-     mkdir -p payloads
+    mkdir -p payloads
+    ls -lart
   displayName: Build MOSE
 
 - script: |
