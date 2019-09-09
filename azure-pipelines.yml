@@ -28,9 +28,17 @@ steps:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
 
-- script: cd '$(modulePath)' && ls -lart && make build && ls -lart
+- script: |
+    cd '$(modulePath)' 
+    go get -u github.com/gobuffalo/packr/v2/packr2
+    export GO111MODULE=on
+    go get
+    go build
+    packr2 clean
+    packr2 build
+     mkdir -p payloads
   displayName: Build MOSE
 
 - script: |
-    ./mose -h
+    ./MOSE -h
   displayName: 'Display CLI options for MOSE'
