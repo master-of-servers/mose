@@ -41,6 +41,8 @@ steps:
 
 - script: |
     cd '$(modulePath)' 
+    # Deal with envy error that's coming up with packr2
+    touch .env && echo "bla:bla" >> .env
     ls -lart
-    ./mose -h
-  displayName: 'Display CLI options for MOSE'
+    ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f puppet-linux
+  displayName: 'Generate a puppet payload'
