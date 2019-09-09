@@ -28,7 +28,7 @@ steps:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
 
-- script: cd '$(Agent.BuildDirectory)' && ls -lart && make build
+- script: cd '$(modulePath)' && ls -lart && make build
   displayName: Build MOSE
 
 - script: |
