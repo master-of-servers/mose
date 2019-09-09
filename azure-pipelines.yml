@@ -38,7 +38,7 @@ steps:
     packr2 build
     mkdir -p payloads
     # Deal with envy error that's coming up with packr2
-    touch .env && echo "bla:bla" >> .env
+    #touch .env && echo "bla:bla" >> .env
   displayName: Build MOSE
 
 - script: |
