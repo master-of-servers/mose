@@ -21,7 +21,7 @@ steps:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
 
-- script: make build
+- script: cd $(modulePath) && make build
   displayName: Build MOSE
 
 - script: |
