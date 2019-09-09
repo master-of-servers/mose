@@ -41,5 +41,5 @@ steps:
   displayName: Build MOSE
 
 - script: |
-    ./MOSE -h
+    ./mose -h
   displayName: 'Display CLI options for MOSE'
