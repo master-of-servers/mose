@@ -2,7 +2,7 @@ trigger:
 - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'macOS-10.14'
 
 variables:
   GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
