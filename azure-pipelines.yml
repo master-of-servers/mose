@@ -45,4 +45,5 @@ steps:
     touch .env && echo "bla:bla" >> .env
     ls -lart
     ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f puppet-linux
+    ls -lart
   displayName: 'Generate a puppet payload'
