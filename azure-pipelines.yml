@@ -29,17 +29,14 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    make build
-    #cd '$(modulePath)' 
-    #go get -u github.com/gobuffalo/packr/v2/packr2
-    #export GO111MODULE=on
-    #go get
-    #go build
-    #packr2 clean
-    #packr2 build
-    #mkdir -p payloads
-    # Deal with envy error that's coming up with packr2
-    #touch .env && echo "bla:bla" >> .env
+    cd '$(modulePath)' 
+    go get -u github.com/gobuffalo/packr/v2/packr2
+    export GO111MODULE=on
+    go get
+    go build
+    packr2 clean
+    packr2 build
+    mkdir -p payloads
   displayName: Build MOSE
 
 - script: |
