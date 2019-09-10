@@ -43,5 +43,6 @@ steps:
 - script: |
     export GO111MODULE=on
     ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(modulePath)/payloads/puppet-linux
+    ls -lart $(modulePath)/payloads/
   displayName: 'Generate a puppet payload'
   workingDirectory: "$(modulePath)"
