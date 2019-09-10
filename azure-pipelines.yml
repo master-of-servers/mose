@@ -29,14 +29,15 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    cd '$(modulePath)' 
-    go get -u github.com/gobuffalo/packr/v2/packr2
-    export GO111MODULE=on
-    go get
-    go build
-    packr2 clean
-    packr2 build
-    mkdir -p payloads
+    make build
+    #cd '$(modulePath)' 
+    #go get -u github.com/gobuffalo/packr/v2/packr2
+    #export GO111MODULE=on
+    #go get
+    #go build
+    #packr2 clean
+    #packr2 build
+    #mkdir -p payloads
     # Deal with envy error that's coming up with packr2
     #touch .env && echo "bla:bla" >> .env
   displayName: Build MOSE
@@ -44,6 +45,6 @@ steps:
 - script: |
     cd '$(modulePath)' 
     export GO111MODULE=on
-    ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f puppet-linux
-    ls -lart
+    ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(PWD)/payloads/puppet-linux
+    ls -lart payloads
   displayName: 'Generate a puppet payload'
