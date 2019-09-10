@@ -30,20 +30,19 @@ steps:
 
 - script: |
     cd $(modulePath)
-    make -i build
-    #go get -u github.com/gobuffalo/packr/v2/packr2
-    #export GO111MODULE=on
-    #go get
-    #go build
-    #packr2 clean
-    #packr2 build
-    #mkdir -p payloads
+    go get -u github.com/gobuffalo/packr/v2/packr2
+    export GO111MODULE=on
+    go get
+    go build
+    packr2 clean
+    packr2 build
+    mkdir -p payloads
     ls -lart
   displayName: Build MOSE
 
 - script: |
     cd $(modulePath)
     export GO111MODULE=on
-    ./MOSE -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(modulePath)/payloads/puppet-linux
+    ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(modulePath)/payloads/puppet-linux
     ls -lart payloads
   displayName: 'Generate a puppet payload'
