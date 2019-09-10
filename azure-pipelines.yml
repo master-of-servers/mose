@@ -38,9 +38,10 @@ steps:
     packr2 build
     mkdir -p payloads
   displayName: Build MOSE
+  workingDirectory: "$(modulePath)"
 
 - script: |
-    cd $(modulePath)
     export GO111MODULE=on
     ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(modulePath)/payloads/puppet-linux
   displayName: 'Generate a puppet payload'
+  workingDirectory: "$(modulePath)"
