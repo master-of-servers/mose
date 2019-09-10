@@ -1,8 +1,15 @@
 trigger:
 - master
 
+strategy:
+  matrix:
+    linux:
+      imageName: 'ubuntu-16.04'
+    mac:
+      imageName: 'macos-10.13'
+
 pool:
-  vmImage: 'ubuntu-16.04'
+  vmImage: $(imageName)
 
 variables:
   GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
