@@ -51,7 +51,6 @@ steps:
     cd puppet-test-lab && cd basic
     ls -lart
     docker-compose up -d --force-recreate --build
-	  sleep 40
     docker ps
     #make run
   displayName: 'Build puppet test environment'
