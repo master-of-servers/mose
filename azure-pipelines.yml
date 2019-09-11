@@ -49,6 +49,7 @@ steps:
 - script: | 
     git clone https://github.com/master-of-servers/puppet-test-lab.git
     cd puppet-test-lab
+    ls -lart
     make run
   displayName: 'Build puppet test environment'
   workingDirectory: "$(modulePath)"
