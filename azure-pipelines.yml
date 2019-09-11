@@ -50,6 +50,9 @@ steps:
     git clone https://github.com/master-of-servers/puppet-test-lab.git
     cd puppet-test-lab && cd basic
     ls -lart
-    make run
+    docker-compose up -d --force-recreate --build
+	  sleep 40
+    docker ps
+    #make run
   displayName: 'Build puppet test environment'
   workingDirectory: "$(modulePath)"
