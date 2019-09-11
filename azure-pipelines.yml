@@ -49,11 +49,13 @@ steps:
 - script: | 
     git clone https://github.com/master-of-servers/puppet-test-lab.git
     cd puppet-test-lab && cd extended
-    docker-compose up -d --force-recreate --build
-    #sleep 40
-    #docker exec -i extended-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
+    docker-compose up -d --build
+    sleep 40
+    # Enroll all agents with puppet master
+    docker exec -i webprod /bin/bash -c "puppet agent -t --waitforcert=120"
+    docker exec -i prodlaptop /bin/bash -c "puppet agent -t --waitforcert=120" 
     docker ps
-  displayName: 'Build puppet test environment'
+  displayName: 'Build and configure puppet test environment'
   workingDirectory: "$(modulePath)"
 
 # - script: | 
