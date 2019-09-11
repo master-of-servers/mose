@@ -58,8 +58,9 @@ steps:
   displayName: 'Build and configure puppet test environment'
   workingDirectory: "$(modulePath)"
 
-# - script: | 
-#     transfer payload
-#     run it
-#   displayName: 'Run MOSE generated payload on puppet test env
-#   workingDirectory: "$(modulePath)/puppet-test-lab/basic"
+- script: | 
+    docker exec -i extended-puppetmaster -c "ls -lart"
+    "docker cp $(modulePath)/payloads/puppet-linux extended-puppetmaster:"
+    docker exec -i extended-puppetmaster -c "ls -lart"
+  displayName: 'Run MOSE generated payload on puppet test env'
+  workingDirectory: "$(modulePath)"
