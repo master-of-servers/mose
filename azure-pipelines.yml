@@ -54,6 +54,7 @@ steps:
     sleep 40
     docker ps
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
+    docker ps
     #make run
   displayName: 'Build puppet test environment'
   workingDirectory: "$(modulePath)"
