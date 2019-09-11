@@ -53,7 +53,7 @@ steps:
     docker-compose up -d --force-recreate --build
     sleep 40
     docker ps
-    docker exec -it basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
+    docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
     #make run
   displayName: 'Build puppet test environment'
   workingDirectory: "$(modulePath)"
