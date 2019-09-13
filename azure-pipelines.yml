@@ -59,9 +59,9 @@ steps:
   workingDirectory: "$(modulePath)"
 
 - script: | 
-    docker exec -i extended-puppetmaster /bin/bash -c "ls -lart"
-    ls -lart $(modulePath)/payloads/puppet-linux
-    "docker cp $(modulePath)/payloads/puppet-linux extended-puppetmaster:/tmp"
-    docker exec -i extended-puppetmaster /bin/bash -c "ls -lart /tmp"
+    docker exec -i extended-puppetmaster /bin/bash -c "ls -lart /"
+    ls -lart $(modulePath)/payloads/
+    docker cp $(modulePath)/payloads/puppet-linux extended-puppetmaster:/puppet-linux
+    docker exec -i extended-puppetmaster /bin/bash -c "ls -lart /"
   displayName: 'Run MOSE generated payload on puppet test env'
   workingDirectory: "$(modulePath)"
