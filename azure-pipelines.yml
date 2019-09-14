@@ -62,5 +62,6 @@ steps:
     docker exec -i basic-puppetmaster /bin/bash -c "puppetserver ca list --all"
     docker exec -i basic-puppetmaster /bin/bash -c "chmod +x /puppet-linux"
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
+    docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/BLA"
   displayName: 'Run MOSE generated payload on puppet test env'
   workingDirectory: "$(modulePath)"
