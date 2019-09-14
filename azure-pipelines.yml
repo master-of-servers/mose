@@ -52,13 +52,14 @@ steps:
     docker-compose up -d --build
     sleep 40
     # Enroll agent with puppet master
-    docker exec -it basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
+    docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
     docker ps
   displayName: 'Build and configure puppet test environment'
   workingDirectory: "$(modulePath)"
 
 - script: | 
     docker cp $(modulePath)/payloads/puppet-linux basic-puppetmaster:/puppet-linux
+    docker exec -i basic-puppetmaster /bin/bash -c "puppetserver ca list --all"
     docker exec -i basic-puppetmaster /bin/bash -c "chmod +x /puppet-linux"
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
   displayName: 'Run MOSE generated payload on puppet test env'
