@@ -1,4 +1,5 @@
-[] Setup CI/CD pipeline with linting and test cases for puppet and chef
+[x] Setup CI/CD pipeline with linting and test cases for puppet
+[] Setup CI/CD pipeline with linting and test cases for chef
 [] Chef - Support multiple orgs 
 [] Chef - Support multiple organizations and multiple knife.rb files
 [] Chef - Move chefEnv and fileUploader to chefutils package 
