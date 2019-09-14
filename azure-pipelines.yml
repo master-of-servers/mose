@@ -44,7 +44,7 @@ steps:
 
 - script: |
     export GO111MODULE=on
-    ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(modulePath)/payloads/puppet-linux
+    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
   displayName: 'Generate a puppet payload'
   workingDirectory: "$(modulePath)"
 
@@ -61,10 +61,9 @@ steps:
 
 - script: | 
     docker cp $(modulePath)/payloads/puppet-linux basic-puppetmaster:/puppet-linux
-    #docker exec -i basic-puppetmaster /bin/bash -c "chmod +x /puppet-linux"
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
-    docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/BLA"
+    docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
   displayName: 'Run MOSE generated payload on puppet test env'
   workingDirectory: "$(modulePath)"
 
