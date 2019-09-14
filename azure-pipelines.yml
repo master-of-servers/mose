@@ -61,8 +61,7 @@ steps:
 
 - script: | 
     docker cp $(modulePath)/payloads/puppet-linux basic-puppetmaster:/puppet-linux
-    docker exec -i basic-puppetmaster /bin/bash -c "puppetserver ca list --all"
-    docker exec -i basic-puppetmaster /bin/bash -c "chmod +x /puppet-linux"
+    #docker exec -i basic-puppetmaster /bin/bash -c "chmod +x /puppet-linux"
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/BLA"
