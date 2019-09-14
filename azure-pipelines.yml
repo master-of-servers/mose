@@ -60,7 +60,6 @@ steps:
 - script: | 
     docker cp $(modulePath)/payloads/puppet-linux basic-puppetmaster:/puppet-linux
     docker exec -i basic-puppetmaster /bin/bash -c "chmod +x /puppet-linux"
-    docker exec -i basic-puppetmaster /bin/bash -c "/puppet-linux"
-    docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | ./puppet-linux"
+    docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
   displayName: 'Run MOSE generated payload on puppet test env'
   workingDirectory: "$(modulePath)"
