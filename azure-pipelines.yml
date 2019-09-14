@@ -40,6 +40,8 @@ steps:
   displayName: Build MOSE
   workingDirectory: "$(modulePath)"
 
+# Puppet
+
 - script: |
     export GO111MODULE=on
     ./mose -c "touch /tmp/BLA && echo test >> /tmp/BLA" -t puppet -f $(modulePath)/payloads/puppet-linux
@@ -66,3 +68,5 @@ steps:
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/BLA"
   displayName: 'Run MOSE generated payload on puppet test env'
   workingDirectory: "$(modulePath)"
+
+# End Puppet
