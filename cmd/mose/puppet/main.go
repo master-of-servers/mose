@@ -344,7 +344,7 @@ func main() {
 
 	// If we're not root, we probably can't backdoor any of the puppet code, so exit
 	// This may not always be true as per https://puppet.com/blog/puppet-without-root-a-real-life-example
-	// But we are going with it as an assumption based on polling various DevOps engineers
+	// But we are going with it as an assumption based on polling various DevOps engineers and Site Reliability engineers
 	utils.CheckRoot()
 	manifestLocs := getExistingManifests()
 
