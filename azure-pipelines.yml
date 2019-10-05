@@ -81,8 +81,11 @@ steps:
 
 - script: |
     export GO111MODULE=on
-    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t chef -f $(modulePath)/payloads/chef-linux
+    expect test_chef.exp
   displayName: 'Generate a chef payload'
   workingDirectory: "$(modulePath)"
 
 # End Chef
+
+# Run Unit Tests
+- script: "go test -count=1 -v -race ./..."
