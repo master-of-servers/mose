@@ -9,3 +9,4 @@
 [] Capability for a msf backdoor that sets up a metasploit listener and then leaves you in it
 [] Add tests
 [] Run tests as part of the azure pipeline
+[] Provide binary releases for MOSE
