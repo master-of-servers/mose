@@ -136,10 +136,9 @@ func backupManifest(manifestLoc string) {
 	if !moseutils.FileExists(path + ".bak.mose") {
 		moseutils.CpFile(manifestLoc, path+".bak.mose")
 		return
-	} else {
-		log.Printf("Backup of the manifest (%v.bak.mose) already exists.", manifestLoc)
-		return
 	}
+	log.Printf("Backup of the manifest (%v.bak.mose) already exists.", manifestLoc)
+	return
 }
 
 func backdoorManifest(manifestLoc string) {
