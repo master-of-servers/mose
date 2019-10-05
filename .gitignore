@@ -12,7 +12,7 @@ knife.rb
 *.test
 
 # Binaries we generate
-mose
+/mose
 chef-linux
 puppet-linux
 
