@@ -76,3 +76,13 @@ steps:
   workingDirectory: "$(modulePath)"
 
 # End Puppet
+
+# Chef
+
+- script: |
+    export GO111MODULE=on
+    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t chef -f $(modulePath)/payloads/chef-linux
+  displayName: 'Generate a chef payload'
+  workingDirectory: "$(modulePath)"
+
+# End Chef
