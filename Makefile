@@ -30,5 +30,5 @@ lint: ## Run all the linters
 	markdownfmt -w README.md
 
 test:
-	@go test -v -race ./... ; \
+	go test -count=1 -v -race ./... ; \
 		echo "Testing Complete."
