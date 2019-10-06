@@ -80,7 +80,8 @@ steps:
 # Chef
 
 - script: |
-    apt-get update
+    apt-get update -y
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
     apt-get install -y expect
     export GO111MODULE=on
     expect test_chef.exp
