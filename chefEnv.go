@@ -153,8 +153,6 @@ func run(cli *client.Client) string {
 
 func copyToDocker(cli *client.Client, id string) {
 
-	copyFiles(cli, id, []string{"dockerfiles/notasevil"}, "tarfiles/notasevil.tar", "root/.chef/cookbooks")
-
 	copyFiles(cli, id, []string{chefClientKey, chefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
 
 	log.Println("Running knife ssl fetch, please wait...")
