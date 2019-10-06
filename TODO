@@ -1,4 +1,3 @@
-[x] Setup CI/CD pipeline with linting and test cases for puppet
 [] Setup CI/CD pipeline with linting and test cases for chef
 [] Chef - Support multiple orgs 
 [] Chef - Support multiple organizations and multiple knife.rb files
@@ -7,7 +6,3 @@
 [] Chef - Add ability to backdoor an existing chef cookbook
 [] Puppet - Add ability to backdoor an existing puppet module
 [] Capability for a msf backdoor that sets up a metasploit listener and then leaves you in it
-[] Add tests
-[] Run tests as part of the azure pipeline
-[] Generate and provide binary releases for MOSE
-[] Generate puppet and chef binaries to ensure CreateAgent() is in place to avoid throwing off tests
