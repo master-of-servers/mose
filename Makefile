@@ -28,3 +28,7 @@ lint: ## Run all the linters
 		--deadline=10m \
 		./...
 	markdownfmt -w README.md
+
+test:
+	go test -count=1 -v -race ./... ; \
+		echo "Testing Complete."

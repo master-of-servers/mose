@@ -136,10 +136,9 @@ func backupManifest(manifestLoc string) {
 	if !moseutils.FileExists(path + ".bak.mose") {
 		moseutils.CpFile(manifestLoc, path+".bak.mose")
 		return
-	} else {
-		log.Printf("Backup of the manifest (%v.bak.mose) already exists.", manifestLoc)
-		return
 	}
+	log.Printf("Backup of the manifest (%v.bak.mose) already exists.", manifestLoc)
+	return
 }
 
 func backdoorManifest(manifestLoc string) {
@@ -345,7 +344,7 @@ func main() {
 
 	// If we're not root, we probably can't backdoor any of the puppet code, so exit
 	// This may not always be true as per https://puppet.com/blog/puppet-without-root-a-real-life-example
-	// But we are going with it as an assumption based on polling various DevOps engineers
+	// But we are going with it as an assumption based on polling various DevOps engineers and Site Reliability engineers
 	utils.CheckRoot()
 	manifestLocs := getExistingManifests()
 
