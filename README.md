@@ -19,10 +19,11 @@ MOSE is a post exploitation tool that enables security professionals with little
 ## Dependencies
 You must download and install the following for MOSE to work:
 
- - [Golang](https://golang.org/) - specifically go1.12.7
+ - [Golang](https://golang.org/) - tested with 1.12.7 through 1.13.4
  
  **Be sure to properly set your GOROOT, PATH and GOPATH env vars**
- - [Docker](https://docs.docker.com/install/) - tested with 18.09.2, build 6247962
+ 
+ - [Docker](https://docs.docker.com/install/) - tested with 18.09.2 through 19.03.4
 
 ## Getting started
 Install all go-specific dependencies and build the binary:
@@ -66,22 +67,19 @@ Usage of ./mose [options]:
   ```
 
 ### TLS Certificates
-
-**WARNING: You should generate and use a TLS certificate signed by a trusted Certificate Authority**
+**You should generate and use a TLS certificate signed by a trusted Certificate Authority**
 
 A self-signed certificate and key are provided for you, although you really shouldn't use them. This key and certificate are widely distributed, so you can not expect privacy if you do choose to use them. They can be found in the  `data` directory.
 
 ### Examples
-You can find a couple of examples of how to run MOSE in [EXAMPLES.md](EXAMPLES.md)
+You can find some examples of how to run MOSE in [EXAMPLES.md](EXAMPLES.md).
 
 ### Test Labs
-You can find test labs that can be run with MOSE at the following locations:
-
+Test labs that can be run with MOSE are at these locations:
  - https://github.com/master-of-servers/puppet-test-lab
  - https://github.com/master-of-servers/chef-test-lab
 
 ### Credits
 The following resources were used to help motivate the creation of this project:
-
  - https://n0tty.github.io/2017/06/11/Enterprise-Offense-IT-Operations-Part-1/
  - http://www.ryanwendel.com/2017/10/03/cooking-up-shells-with-a-compromised-chef-server/

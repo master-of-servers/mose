@@ -11,7 +11,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/l50/goutils"
-	"github.com/l50/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 	"io/ioutil"
 	"log"
 	"os"

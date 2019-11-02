@@ -11,7 +11,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/mose/pkg/chefutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 	"github.com/mholt/archiver"
 	"io"
 	"io/ioutil"
@@ -236,7 +236,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 		os.Exit(0)
 	}
 	// Run the MOSE binary on the new workstation that we just created
-	agents, err := chefutils.TargetAgents(nodes, osTarget)
+	agents, err := moseutils.TargetAgents(nodes, osTarget)
 	if err != nil {
 		log.Println("Quitting...")
 		signalChan <- os.Interrupt

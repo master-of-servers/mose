@@ -2,13 +2,12 @@
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
-package chefutils
+package moseutils
 
 import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/l50/mose/pkg/moseutils"
 	"os"
 	"strings"
 )
@@ -16,7 +15,7 @@ import (
 // TargetAgents allows a user to select specific chef agents, or return them all as a []string
 func TargetAgents(nodes []string, osTarget string) ([]string, error) {
 	var targets []string
-	if ans, err := moseutils.AskUserQuestion("Do you want to target specific chef agents?", osTarget); ans && err == nil {
+	if ans, err := AskUserQuestion("Do you want to target specific chef agents?", osTarget); ans && err == nil {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("%s", nodes[0])
 		for _, node := range nodes[1:] {

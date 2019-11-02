@@ -1,12 +1,14 @@
 build:
 	go get -u github.com/gobuffalo/packr/v2/packr2
 	export GO111MODULE=on
+	packr2 build
 	go get
 	go build
-	packr2 clean
-	packr2 build
 	mkdir -p payloads
 
+destroy:
+	packr2 clean
+	
 setup-linter: ## Install all the build and lint dependencies
 	gometalinter --install
 

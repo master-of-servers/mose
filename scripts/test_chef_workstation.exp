@@ -3,5 +3,5 @@
 spawn ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t chef -f "$::env(PWD)/payloads/chef-linux"
 
 expect "Is your target a chef workstation?\[Y/n/q\]"
-send "q\r"
+send "Y\r"
 expect eof
