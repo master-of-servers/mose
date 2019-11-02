@@ -79,7 +79,7 @@ steps:
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
     sudo apt-get install -y expect
     export GO111MODULE=on
-    expect test_chef.exp
+    expect scripts/test_chef.exp
   displayName: 'Generate a chef payload'
   workingDirectory: "$(modulePath)"
 # End Chef
