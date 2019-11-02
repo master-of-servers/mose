@@ -7,6 +7,7 @@
 # Misc
 .DS_Store
 knife.rb
+*.tar
 
 # Test binary, build with `go test -c`
 *.test
