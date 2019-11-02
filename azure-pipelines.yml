@@ -20,9 +20,9 @@ variables:
 
 steps:
 - script: |
-    wget "https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.12.7.tar.gz"
-    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.12.7.tar.gz"
-  displayName: 'Install Go 1.12.7'
+    wget "https://dl.google.com/go/go1.13.4.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.13.4.tar.gz"
+    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.13.4.tar.gz"
+  displayName: 'Install Go 1.13.4'
 
 - script: |
     mkdir -p '$(GOBIN)'
@@ -39,10 +39,9 @@ steps:
 - script: |
     go get -u github.com/gobuffalo/packr/v2/packr2
     export GO111MODULE=on
+    packr2 build
     go get
     go build
-    packr2 clean
-    packr2 build
     mkdir -p payloads
   displayName: Build MOSE
   workingDirectory: "$(modulePath)"
@@ -80,7 +79,7 @@ steps:
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
     sudo apt-get install -y expect
     export GO111MODULE=on
-    expect test_chef.exp
+    expect scripts/test_chef.exp
   displayName: 'Generate a chef payload'
   workingDirectory: "$(modulePath)"
 # End Chef
