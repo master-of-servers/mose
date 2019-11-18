@@ -46,46 +46,40 @@ steps:
   displayName: Build MOSE
   workingDirectory: "$(modulePath)"
 
-# Puppet
-- script: |
-    export GO111MODULE=on
-    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
-  displayName: 'Generate a puppet payload'
-  workingDirectory: "$(modulePath)"
-
-- script: | 
-    git clone https://github.com/master-of-servers/puppet-test-lab.git
-    cd puppet-test-lab && cd basic
-    docker-compose up -d --build
-    sleep 40
-    # Enroll agent with puppet master
-    docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
-    docker ps
-  displayName: 'Build and configure puppet test environment'
-  workingDirectory: "$(modulePath)"
-
-- script: | 
-    docker cp $(modulePath)/payloads/puppet-linux basic-puppetmaster:/puppet-linux
-    docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
-    docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
-    docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
-  displayName: 'Run MOSE generated payload on puppet test env'
-  workingDirectory: "$(modulePath)"
-# End Puppet
-
 # Chef
 - script: |
     sudo apt-get update -y
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
     sudo apt-get install -y expect
     export GO111MODULE=on
-    expect scripts/test_chef.exp
-  displayName: 'Generate a chef payload'
+    expect scripts/test_chef_workshop.exp
+  displayName: 'Generate a chef payload for chef workstation in test env'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    git clone https://github.com/master-of-servers/chef-test-lab.git
+    cd chef-test-lab && git checkout develop
+    ls
+    pwd
+    cd basic/docker/basic
+    bash create_ssh_key.sh
+    docker-compose up -d --build
+    sleep 540
+    docker ps
+  displayName: 'Build and configure chef test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    docker cp $(modulePath)/payloads/chef-linux basic-chef-workstation:/chef-linux
+    docker exec -i basic-chef-workstation /bin/bash -c "echo 'Y' | /chef-linux"
+    docker exec -i basic-chef-agent-1 /bin/bash -c "chef client"
+    docker exec -i basic-chef-agent-1 /bin/bash -c "cat /tmp/test.txt"
+  displayName: 'Run MOSE generated payload on chef workstation in test env'
   workingDirectory: "$(modulePath)"
 # End Chef
 
 - script: |
-   export GO111MODULE=on
-   go test -count=1 -v -race ./...
+    export GO111MODULE=on
+    go test -count=1 -v -race ./...
   displayName: 'Run unit tests'
   workingDirectory: "$(modulePath)"
