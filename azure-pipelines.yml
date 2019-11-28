@@ -43,7 +43,7 @@ steps:
     go get
     go build
     mkdir -p payloads
-  displayName: Build MOSE
+  displayName: 'Build MOSE'
   workingDirectory: "$(modulePath)"
 
 # Puppet
@@ -69,7 +69,7 @@ steps:
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
-  displayName: 'Run MOSE generated payload on puppet test env'
+  displayName: 'Run MOSE generated payload on puppet test environment'
   workingDirectory: "$(modulePath)"
 # End Puppet
 
@@ -79,8 +79,42 @@ steps:
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
     sudo apt-get install -y expect
     export GO111MODULE=on
-    expect scripts/test_chef.exp
-  displayName: 'Generate a chef payload'
+    expect scripts/test_chef_workstation.exp
+  displayName: 'Generate a chef payload for workstation in chef test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    git clone https://github.com/master-of-servers/chef-test-lab.git
+    cd chef-test-lab
+    cd docker/basic
+    bash create_ssh_key.sh
+    docker-compose up -d --build
+    echo "Sleeping for 10 minutes (600 seconds) while waiting for the chef environment to finish building."
+    sleep 600
+    docker ps
+  displayName: 'Build and configure chef test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to workstation
+    docker cp $(modulePath)/payloads/chef-linux basic-chef-workstation:/chef-linux
+    # This is very annoying and redundant work, but it seems to need to be done for the pipeline
+    docker exec -i basic-chef-workstation /bin/bash -c "cd /root/.chef/cookbooks && rm -rf chef-client && knife supermarket download chef-client && tar -xvf chef-client-*; rm *tar*"
+    docker exec -i basic-chef-workstation /bin/bash -c "cd /root/.chef/cookbooks && cp hello/Berksfile chef-client/Berksfile"
+    docker exec -i basic-chef-workstation /bin/bash -c "cd /root/.chef/cookbooks/chef-client && berks install && berks upload"
+    docker exec -i basic-chef-workstation /bin/bash -c "cd /root/.chef/ && knife ssl fetch && knife upload cookbooks"
+    docker exec -i basic-chef-workstation knife vault create secret_vault mysql_pw '{"user": "mysql", "password": "TheM0stS3cr3T!!!"}'
+    # Bootstrap agent with chef server
+    docker exec -i basic-chef-workstation /bin/bash -c "knife bootstrap chef-agent-1 -u root -P toor --sudo -N chef-agent-1 --run-list 'recipe[hello], recipe[chef-client::config]'"
+
+    # Run MOSE against the workstation
+    docker exec -i basic-chef-workstation /bin/bash -c "echo 'n' | /chef-linux"
+    # Run chef-client to enact the changes made by MOSE
+    docker exec -i basic-chef-agent-1 /bin/bash -c "chef-client"
+    
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-chef-agent-1 /bin/bash -c "cat /tmp/test.txt"
+  displayName: 'Run MOSE generated payload on workstation in chef test environment'
   workingDirectory: "$(modulePath)"
 # End Chef
 
