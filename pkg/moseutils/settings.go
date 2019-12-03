@@ -10,22 +10,23 @@ import (
 	"os"
 )
 
+// Settings represents the configuration information found in settings.json
 type Settings struct {
+	AttackOrgName     string
+	ChefClientKey     string
+	ChefNodeName      string
+	ChefValidationKey string
+	CleanupFile       string
+	ContainerName     string
+	PuppetBackupLoc   string
 	SslCertPath       string
 	SslKeyPath        string
-	ChefNodeName      string
-	ChefClientKey     string
-	ChefValidationKey string
-	AttackOrgName     string
 	TargetOrgName     string
-	TargetIP          string
+	TargetSystem      string
 	UploadFilePath    string
-	CleanupFile       string
-	PuppetBackupLoc   string
-	RemoteHosts       string
-	ContainerName     string
 }
 
+// LoadSettings will return the settings found in settings.json
 func LoadSettings(jsonFile string) Settings {
 	file, err := os.Open(jsonFile)
 	if err != nil {

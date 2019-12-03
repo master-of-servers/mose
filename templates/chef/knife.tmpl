@@ -5,5 +5,5 @@ node_name                '{{.NodeName}}'
 client_key               '/root/.chef/{{.KeyName}}'
 validation_client_name   '{{.UserOrgName}}'
 validation_key           '/root/.chef/{{.ValidKey}}'
-chef_server_url          'https://{{.TargetIP}}/organizations/{{.OrgName}}'
+chef_server_url          'https://{{.TargetSystem}}/organizations/{{.OrgName}}'
 cookbook_path            ["/root/.chef/cookbooks"]

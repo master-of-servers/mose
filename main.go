@@ -37,12 +37,12 @@ var (
 	payloadName       string
 	filePath          string
 	cmdFileUpload     string
-	cmdUploadPath     string
+	uploadFilePath    string
 	imageName         = "mose/chef-workstation"
 	chefNodeName      string
 	chefClientKey     string
 	chefValidationKey string
-	targetIP          string
+	targetSystem      string
 	attackOrgName     string
 	targetOrgName     string
 	timeToServe       int
@@ -66,7 +66,7 @@ type cliArgs struct {
 	OrgName         string
 	OsTarget        string
 	PayloadName     string
-	TargetIP        string
+	TargetSystem    string
 	UserOrgName     string
 	ValidKey        string
 	WebSrvPort      string
@@ -110,23 +110,18 @@ func initSettings(file string) {
 		}
 	}
 
-	sslCertPath = settings.SslCertPath
-	sslKeyPath = settings.SslKeyPath
+	attackOrgName = settings.AttackOrgName
 	chefClientKey = settings.ChefClientKey
 	chefNodeName = settings.ChefNodeName
 	chefValidationKey = settings.ChefValidationKey
-	attackOrgName = settings.AttackOrgName
-	targetOrgName = settings.TargetOrgName
-	targetIP = settings.TargetIP
 	cleanupFile = settings.CleanupFile
-	puppetBackupLoc = settings.PuppetBackupLoc
 	containerName = settings.ContainerName
-
-	if rhost == "" {
-		rhost = settings.RemoteHosts
-	}
-
-	cmdUploadPath = settings.UploadFilePath
+	puppetBackupLoc = settings.PuppetBackupLoc
+	sslCertPath = settings.SslCertPath
+	sslKeyPath = settings.SslKeyPath
+	targetOrgName = settings.TargetOrgName
+	targetSystem = settings.TargetSystem
+	uploadFilePath = settings.UploadFilePath
 }
 
 // usage prints the usage instructions for mose.
@@ -159,11 +154,11 @@ func generateParams() {
 		OrgName:         targetOrgName,
 		UserOrgName:     attackOrgName,
 		ValidKey:        filepath.Base(chefValidationKey),
-		TargetIP:        targetIP,
+		TargetSystem:        targetSystem,
 		UploadFilename:  "",
 		ServeSSL:        serveSSL,
 		ExfilPort:       exfilPort,
-		UploadFilePath:  cmdUploadPath,
+		UploadFilePath:  uploadFilePath,
 		CleanupFile:     cleanupFile,
 		PuppetBackupLoc: puppetBackupLoc,
 	}
