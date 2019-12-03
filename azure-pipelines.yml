@@ -89,8 +89,8 @@ steps:
     cd docker/basic
     bash create_ssh_key.sh
     docker-compose up -d --build
-    echo "Sleeping for 10 minutes (600 seconds) while waiting for the chef environment to finish building."
-    sleep 600
+    echo "Sleeping for 12 minutes (720 seconds) while waiting for the chef environment to finish building."
+    sleep 720
     docker ps
   displayName: 'Build and configure chef test environment'
   workingDirectory: "$(modulePath)"

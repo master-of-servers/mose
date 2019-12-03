@@ -7,7 +7,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/l50/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 	"io"
 	"log"
 	"net/http"

@@ -7,7 +7,6 @@ package moseutils
 import (
 	"bufio"
 	"errors"
-	"github.com/mholt/archiver"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,6 +14,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/mholt/archiver"
 )
 
 func CreateFolders(folders []string) bool {

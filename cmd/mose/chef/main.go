@@ -10,11 +10,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
-	"github.com/fatih/color"
-	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/goutils"
-	"github.com/l50/mose/pkg/chefutils"
-	"github.com/l50/mose/pkg/moseutils"
 	"io"
 	"log"
 	"mime/multipart"
@@ -26,6 +21,11 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 type Command struct {
@@ -397,7 +397,7 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 		if suppliedNodes != "" {
 			agents = strings.Fields(suppliedNodes)
 		} else {
-			agents, err = chefutils.TargetAgents(nodes, osTarget)
+			agents, err = moseutils.TargetAgents(nodes, osTarget)
 			if err != nil {
 				log.Fatal("Quitting")
 			}
@@ -418,7 +418,7 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 		}
 		var cookbooksLoc string
 		for _, dir := range chefDirs {
-			if strings.Contains(dir, "cookbooks") {
+			if strings.Contains(dir, ".chef/cookbooks") {
 				cookbooksLoc = dir
 			}
 		}

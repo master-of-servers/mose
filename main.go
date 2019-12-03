@@ -8,10 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"github.com/fatih/color"
-	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/goutils"
-	"github.com/l50/mose/pkg/moseutils"
 	"log"
 	"os"
 	"path"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 var (
@@ -37,7 +38,7 @@ var (
 	filePath          string
 	cmdFileUpload     string
 	cmdUploadPath     string
-	imageName         = "l50/chef-workstation-test"
+	imageName         = "mose/chef-workstation"
 	chefNodeName      string
 	chefClientKey     string
 	chefValidationKey string
@@ -252,6 +253,9 @@ func generatePayload() {
 	}
 
 	res, err := utils.RunCommand("env", "GOOS="+strings.ToLower(osTarget), "GOARCH=amd64", "go", "build", "-o", fPayload)
+	if verbose {
+		log.Printf("env GOOS=" + strings.ToLower(osTarget) + " GOARCH=amd64" + " go" + " build" + " -o " + fPayload)
+	}
 	if err != nil {
 		log.Fatalf("Error running the command to generate the target payload: %v", err)
 	}
