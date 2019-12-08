@@ -80,23 +80,22 @@ type cliArgs struct {
 
 // init specifies the input parameters that mose can take.
 func init() {
-	flag.StringVar(&cmd, "c", "", "Command to run on the targets.")
-	flag.StringVar(&localIP, "l", "", "Local IP Address.")
-	flag.StringVar(&cmTarget, "t", "puppet", "Configuration management tool to target.")
 	flag.StringVar(&osArch, "a", "amd64", "Architecture that the target CM tool is running on.")
-	flag.StringVar(&osTarget, "o", "linux", "Operating system that the target CM tool is on.")
-	//flag.BoolVar(&revShell, "r", false, "Drop into msf reverse shell listener.")
-	flag.StringVar(&payloadName, "m", "my_cmd", "Name for backdoor payload")
+	flag.StringVar(&cmd, "c", "", "Command to run on the targets.")
+	flag.IntVar(&exfilPort, "ep", 443, "Port used to exfil data from chef server (default 443 with ssl, 9090 without)")
 	flag.StringVar(&filePath, "f", "", "Store binary at <filepath>")
+	flag.StringVar(&cmdFileUpload, "fu", "", "File upload option")
+	flag.StringVar(&localIP, "l", "", "Local IP Address.")
+	flag.StringVar(&payloadName, "m", "my_cmd", "Name for backdoor payload")
+	flag.BoolVar(&noserve, "ns", false, "Disable serving of payload")
+	flag.StringVar(&osTarget, "o", "linux", "Operating system that the target CM tool is on.")
+	flag.IntVar(&webSrvPort, "p", 443, "Port used to serve payloads on (default 443 with ssl, 8090 without)")
 	flag.StringVar(&settingsPath, "s", "settings.json", "Json file to load for mose")
 	flag.BoolVar(&serveSSL, "ssl", false, "Serve payload over TLS")
-	flag.IntVar(&webSrvPort, "p", 443, "Port used to serve payloads on (default 443 with ssl, 8090 without)")
-	flag.IntVar(&exfilPort, "ep", 443, "Port used to exfil data from chef server (default 443 with ssl, 9090 without)")
-	flag.BoolVar(&verbose, "v", false, "Display verbose output")
-	flag.BoolVar(&noserve, "ns", false, "Disable serving of payload")
-	flag.StringVar(&rhost, "rhost", "", "Set the remote host for /etc/hosts in the chef workstation	container (format is hostname:ip)")
-	flag.StringVar(&cmdFileUpload, "fu", "", "File upload option")
+	flag.StringVar(&cmTarget, "t", "puppet", "Configuration management tool to target.")
 	flag.IntVar(&timeToServe, "tts", 60, "Number of seconds to serve the payload")
+	flag.BoolVar(&verbose, "v", false, "Display verbose output")
+	flag.StringVar(&rhost, "r", "", "Set the remote host for /etc/hosts in the chef workstation	container (format is hostname:ip)")
 }
 
 func initSettings(file string) {
@@ -154,7 +153,7 @@ func generateParams() {
 		OrgName:         targetOrgName,
 		UserOrgName:     attackOrgName,
 		ValidKey:        filepath.Base(chefValidationKey),
-		TargetSystem:        targetSystem,
+		TargetSystem:    targetSystem,
 		UploadFilename:  "",
 		ServeSSL:        serveSSL,
 		ExfilPort:       exfilPort,

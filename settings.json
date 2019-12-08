@@ -6,6 +6,7 @@
 	"cleanupFile" : "/root/.cleanup",
 	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
 	"puppetBackupLoc" : "",
+	"remoteHosts" : "",
 	"sslCertPath": "data/mose.crt",
 	"sslKeyPath" : "data/mose.key",
 	"targetOrgName": "my_org",

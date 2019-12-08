@@ -19,6 +19,7 @@ type Settings struct {
 	CleanupFile       string
 	ContainerName     string
 	PuppetBackupLoc   string
+	RemoteHosts       string
 	SslCertPath       string
 	SslKeyPath        string
 	TargetOrgName     string
