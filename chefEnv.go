@@ -305,12 +305,12 @@ func monitor(cli *client.Client, id string) {
 
 func generateKnife() {
 	cliArgs := cliArgs{
-		NodeName:     chefNodeName,
-		KeyName:      "",
-		OrgName:      targetOrgName,
-		UserOrgName:  attackOrgName,
-		ValidKey:     filepath.Base(chefValidationKey),
-		TargetSystem: targetSystem,
+		NodeName:         chefNodeName,
+		KeyName:          "",
+		OrgName:          targetOrgName,
+		UserOrgName:      attackOrgName,
+		ValidKey:         filepath.Base(chefValidationKey),
+		TargetChefServer: targetChefServer,
 	}
 	if chefClientKey != "" {
 		cliArgs.KeyName = filepath.Base(chefClientKey)

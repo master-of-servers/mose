@@ -6,9 +6,10 @@
 	"cleanupFile" : "/root/.cleanup",
 	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
 	"puppetBackupLoc" : "",
+	"remoteHost" : "",
 	"sslCertPath": "data/mose.crt",
 	"sslKeyPath" : "data/mose.key",
 	"targetOrgName": "my_org",
-	"targetSystem" : "chef-server",
+	"targetChefServer" : "chef-server",
 	"uploadFilePath": "/root/.definitelynotevil"
 }
