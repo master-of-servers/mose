@@ -89,7 +89,7 @@ func init() {
 	flag.BoolVar(&noserve, "ns", false, "Disable serving of payload")
 	flag.StringVar(&osTarget, "o", "linux", "Operating system that the target CM tool is on.")
 	flag.IntVar(&webSrvPort, "p", 443, "Port used to serve payloads on (default 443 with ssl, 8090 without)")
-	flag.StringVar(&settingsPath, "s", "settings.json", "Json file to load for MOSE")
+	flag.StringVar(&settingsPath, "s", "settings.json", "JSON file to load for MOSE")
 	flag.BoolVar(&serveSSL, "ssl", false, "Serve payload over TLS")
 	flag.StringVar(&cmTarget, "t", "puppet", "Configuration management tool to target.")
 	flag.IntVar(&timeToServe, "tts", 60, "Number of seconds to serve the payload")
@@ -101,7 +101,7 @@ func initSettings(file string) {
 	settings := moseutils.LoadSettings(file)
 
 	if verbose {
-		log.Print("Json configuration loaded with the following values")
+		log.Print("JSON configuration loaded with the following values")
 		b, err := json.MarshalIndent(settings, "", "  ")
 		if err == nil {
 			log.Println(string(b))
@@ -125,8 +125,6 @@ func initSettings(file string) {
 	if rhost == "" {
 		rhost = settings.RemoteHost
 	}
-
-	uploadFilePath = settings.UploadFilePath
 }
 
 // usage prints the usage instructions for mose.
