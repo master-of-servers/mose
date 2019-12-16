@@ -5,6 +5,7 @@
 	"chefValidationKey" : "keys/my_org-validator.pem",
 	"cleanupFile" : "/root/.cleanup",
 	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
+	"imageName" : "mose/chef-workstation",
 	"puppetBackupLoc" : "",
 	"remoteHost" : "",
 	"sslCertPath": "data/mose.crt",

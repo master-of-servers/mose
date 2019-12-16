@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-// Settings represents the configuration information found in settings.json
+// settings represents the configuration information found in settings.json
 type Settings struct {
 	AttackOrgName     string
 	ChefClientKey     string
@@ -18,26 +18,28 @@ type Settings struct {
 	ChefValidationKey string
 	CleanupFile       string
 	ContainerName     string
+	ImageName		  string
 	PuppetBackupLoc   string
 	RemoteHost        string
-	SslCertPath       string
-	SslKeyPath        string
+	SSLCertPath       string
+	SSLKeyPath        string
 	TargetChefServer  string
 	TargetOrgName     string
 	UploadFilePath    string
 }
 
-// LoadSettings will return the settings found in settings.json
-func LoadSettings(jsonFile string) Settings {
+// loadSettings will return the settings found in settings.json
+func loadSettings(jsonFile string) Settings {
 	file, err := os.Open(jsonFile)
 	if err != nil {
 		log.Fatalf("Error loading settings: %s", err)
 	}
 
-	settings := Settings{}
+	jsonSettings := Settings{}
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&settings); err != nil {
+	if err := decoder.Decode(&jsonSettings); err != nil {
 		log.Fatalf("Error decoding settings: %s", err)
 	}
-	return settings
+
+	return jsonSettings
 }
