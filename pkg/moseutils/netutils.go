@@ -63,7 +63,7 @@ func GetLocalIP() (string, error) {
 			return ip.String(), nil
 		}
 	}
-	return "", errors.New("are you connected to the network?")
+	return "", errors.New("Are you connected to the network?")
 }
 
 func singleFile(h http.Handler) http.Handler {
