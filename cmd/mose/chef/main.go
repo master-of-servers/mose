@@ -60,10 +60,10 @@ var (
 )
 
 func init() {
+	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
+	flag.StringVar(&suppliedFilename, "f", "", "Path to the file upload to be used with a chef cookbook")
 	flag.BoolVar(&inspect, "i", false, "Used to retrieve information about a system.")
 	flag.StringVar(&suppliedNodes, "n", "", "Space separated nodes")
-	flag.StringVar(&suppliedFilename, "f", "", "Path to the file upload to be used with a chef cookbook")
-	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
 }
 
 // runKnifeCmd runs an input knife command

@@ -81,7 +81,7 @@ var (
 	timeToServe   int
 )
 
-func init(){
+func processInput(){
 	Cli = ParseCLIArgs()
 	JSONSettings = loadSettings(Cli.SettingsPath)
 
@@ -110,6 +110,7 @@ func init(){
 // GetParameters returns all user input parameters specified through
 // command line arguments and the settings.json file
 func GetUserInput() UserInput {
+	processInput()
 	var UserInput = UserInput{
 		AttackOrgName:     JSONSettings.AttackOrgName,
 		ChefClientKey:     JSONSettings.ChefClientKey,

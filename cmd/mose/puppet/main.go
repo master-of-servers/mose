@@ -49,6 +49,7 @@ var (
 
 func init() {
 	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
+	flag.Parse()
 }
 
 func cleanAgentOutput(cmdOut string) []string {
@@ -340,8 +341,6 @@ func doCleanup(manifestLocs []string) {
 }
 
 func main() {
-	flag.Parse()
-
 	// If we're not root, we probably can't backdoor any of the puppet code, so exit
 	// This may not always be true as per https://puppet.com/blog/puppet-without-root-a-real-life-example
 	// But we are going with it as an assumption based on polling various DevOps engineers and Site Reliability engineers

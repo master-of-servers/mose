@@ -30,7 +30,7 @@ type CliArgs struct {
 	Rhost         string
 }
 
-func init() {
+func setFlags() {
 	flag.StringVar(&osArch, "a", "amd64", "Architecture that the target CM tool is running on")
 	flag.StringVar(&cmd, "c", "", "Command to run on the targets")
 	flag.BoolVar(&debug, "d", false, "Display debug output")
@@ -68,6 +68,7 @@ func usage() {
 }
 
 func ParseCLIArgs() CliArgs {
+	setFlags()
 	CliArgs := CliArgs{
 		OSArch:        osArch,
 		Cmd:           cmd,
