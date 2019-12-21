@@ -7,7 +7,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/l50/MOSE/pkg/moseutils"
 	"io"
 	"log"
 	"net/http"
@@ -107,8 +107,8 @@ func orgUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Successfully uploaded %v", org.Name)
-	// TODO support multiple orgs
-	targetOrgName = strings.TrimSpace(org.Name)
+	// TODO: support multiple orgs
+	UserInput.TargetOrgName = strings.TrimSpace(org.Name)
 }
 
 // createUploadRoute is used to create an exfil route
@@ -131,11 +131,11 @@ func createUploadRoute(localIP string, localPort int) {
 	http.HandleFunc("/upload", fileUpload)
 	http.HandleFunc("/org", orgUpload)
 	proto := "http"
-	if serveSSL {
+	if UserInput.ServeSSL {
 		proto = "https"
 	}
-	msg("Listener being served at %s://%s:%d/%s-%s for %d seconds", proto, ip, localPort, cmTarget, osTarget, timeToServe)
-	srv := moseutils.StartServer(localPort, "", serveSSL, sslCertPath, sslKeyPath, time.Duration(timeToServe)*time.Second, false)
+	msg("Listener being served at %s://%s:%d/%s-%s for %d seconds", proto, ip, localPort, UserInput.CMTarget, UserInput.OSTarget, timeToServe)
+	srv := moseutils.StartServer(localPort, "", UserInput.ServeSSL, UserInput.SslCertPath, UserInput.SslKeyPath, time.Duration(timeToServe)*time.Second, false)
 
 	info("Web server shutting down...")
 
