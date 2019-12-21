@@ -5,14 +5,14 @@
 package agent
 
 type Agent struct {
-	BdCmd           string
+	Cmd           string
 	LocalIP         string
 	OsTarget        string
 	PayloadName     string
 	FileName        string
 	SSL             bool
 	ExPort          int
-	FilePath        string
+	RemoteUploadFilePath        string
 	CleanupFile     string
 	PuppetBackupLoc string
 }

