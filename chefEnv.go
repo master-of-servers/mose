@@ -372,12 +372,10 @@ func setupChefWorkstationContainer(localIP string, exfilPort int, osTarget strin
 	if err != nil {
 		log.Fatalf("Could not get docker client: %v", err)
 	}
-
 	if UserInput.Debug {
 		log.Println("Building Workstation container, please wait...")
 	}
 	build(cli)
-
 	if UserInput.Debug {
 		log.Println("Starting Workstation container, please wait...")
 	}
@@ -390,7 +388,6 @@ func setupChefWorkstationContainer(localIP string, exfilPort int, osTarget strin
 	}
 
 	copyToDocker(cli, id)
-
 	if UserInput.Debug {
 		log.Println("Running MOSE in Workstation container, please wait...")
 	}
