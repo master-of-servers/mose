@@ -10,22 +10,22 @@ import (
 	"os"
 )
 
-// settings represents the configuration information found in settings.json
+// Settings represents the configuration information found in settings.json
 type Settings struct {
-	AttackOrgName     string
-	ChefClientKey     string
-	ChefNodeName      string
-	ChefValidationKey string
-	CleanupFile       string
-	ContainerName     string
-	ImageName		  string
-	PuppetBackupLoc   string
-	RemoteHost        string
-	SSLCertPath       string
-	SSLKeyPath        string
-	TargetChefServer  string
-	TargetOrgName     string
-	UploadFilePath    string
+	ChefClientKey       string
+	ChefNodeName        string
+	ChefValidationKey   string
+	CleanupFile         string
+	ContainerName       string
+	ImageName           string
+	PuppetBackupLoc     string
+	RemoteHost          string
+	SSLCertPath         string
+	SSLKeyPath          string
+	TargetChefServer    string
+	TargetOrgName       string
+	TargetValidatorName string
+	UploadFilePath      string
 }
 
 // loadSettings will return the settings found in settings.json

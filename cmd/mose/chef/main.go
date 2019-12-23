@@ -24,8 +24,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
-	utils "github.com/l50/goutils"
 	"github.com/l50/MOSE/pkg/moseutils"
+	utils "github.com/l50/goutils"
 )
 
 type Command struct {

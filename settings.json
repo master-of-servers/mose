@@ -1,5 +1,4 @@
 {
-	"attackOrgName" : "my_org-validator",
 	"chefClientKey" : "keys/admin.pem",
 	"chefNodeName": "admin",
 	"chefValidationKey" : "keys/my_org-validator.pem",
@@ -10,7 +9,8 @@
 	"remoteHost" : "",
 	"sslCertPath": "data/mose.crt",
 	"sslKeyPath" : "data/mose.key",
-	"targetOrgName": "my_org",
 	"targetChefServer" : "chef-server",
+	"targetOrgName": "my_org",
+	"targetValidatorName" : "my_org-validator",
 	"uploadFilePath": "/root/.definitelynotevil"
 }

@@ -30,12 +30,13 @@ var (
 	signalChan chan os.Signal
 )
 
-type KnifeTemplateArgs struct {
-	ChefNodeName    string
-	ChefClientKey   string
-	OrgName     string
-	ChefValidationKey    string
+type knifeTemplateArgs struct {
+	ChefNodeName        string
+	ChefClientKey       string
+	TargetOrgName       string
+	ChefValidationKey   string
 	TargetChefServer    string
+	TargetValidatorName string
 }
 
 func copyFiles(cli *client.Client, id string, files []string, tarLocation string, dockerLocation string) {
@@ -90,10 +91,12 @@ func build(cli *client.Client) {
 	t := archiver.Tar{
 		OverwriteExisting: true,
 	}
+
 	err := t.Archive([]string{"dockerfiles"}, "tarfiles/dockerfiles.tar")
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	dockerBuildContext, err := os.Open("tarfiles/dockerfiles.tar")
 	if err != nil {
 		log.Fatalln(err)
@@ -111,6 +114,7 @@ func build(cli *client.Client) {
 		log.Fatalln("Error building image " + err.Error())
 	}
 	defer ibr.Body.Close()
+
 	response, err := ioutil.ReadAll(ibr.Body)
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -160,7 +164,6 @@ func run(cli *client.Client) string {
 }
 
 func copyToDocker(cli *client.Client, id string) {
-
 	copyFiles(cli, id, []string{UserInput.ChefClientKey, UserInput.ChefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
 
 	log.Println("Running knife ssl fetch, please wait...")
@@ -184,6 +187,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	if UserInput.FileUpload != "" {
 		filesToCopy = append(filesToCopy, path.Join("payloads", path.Base(UserInput.FileUpload)))
 	}
+
 	copyFiles(cli, id, filesToCopy, "tarfiles/main.tar", "/")
 
 	_ = simpleRun(cli, id, []string{"chmod", "u+x", binPath})
@@ -312,24 +316,19 @@ func monitor(cli *client.Client, id string) {
 }
 
 func generateKnife() {
-	knifeTemplateArgs := KnifeTemplateArgs{
-		ChefNodeName:    UserInput.ChefNodeName,
-		ChefClientKey:   UserInput.ChefClientKey,
-		OrgName:     UserInput.TargetOrgName,
-		ChefValidationKey:    filepath.Base(UserInput.ChefValidationKey),
+	knifeArgs := knifeTemplateArgs{
+		ChefNodeName:        UserInput.ChefNodeName,
+		ChefClientKey:       filepath.Base(UserInput.ChefClientKey),
+		TargetOrgName:       UserInput.TargetOrgName,
+		ChefValidationKey:   filepath.Base(UserInput.ChefValidationKey),
 		TargetChefServer:    UserInput.TargetChefServer,
+		TargetValidatorName: UserInput.TargetValidatorName,
 	}
 
-	if UserInput.ChefClientKey != "" {
-		knifeTemplateArgs.ChefClientKey = filepath.Base(UserInput.ChefClientKey)
-	}
-	if UserInput.ChefValidationKey != "" {
-		knifeTemplateArgs.ChefValidationKey = filepath.Base(UserInput.ChefValidationKey)
-	}
 	paramLoc := filepath.Join("templates", UserInput.CMTarget)
 	box := packr.New("Params", "|")
 	box.ResolutionDir = paramLoc
-	// knife template
+	// Build knife.rb using the knife template
 	s, err := box.FindString("knife.tmpl")
 
 	if err != nil {
@@ -348,7 +347,7 @@ func generateKnife() {
 		log.Fatalln(err)
 	}
 
-	err = t.Execute(f, UserInput)
+	err = t.Execute(f, knifeArgs)
 
 	if err != nil {
 		log.Fatal("Execute: ", err)
@@ -372,10 +371,13 @@ func setupChefWorkstationContainer(localIP string, exfilPort int, osTarget strin
 	if err != nil {
 		log.Fatalf("Could not get docker client: %v", err)
 	}
+
 	if UserInput.Debug {
 		log.Println("Building Workstation container, please wait...")
 	}
+
 	build(cli)
+
 	if UserInput.Debug {
 		log.Println("Starting Workstation container, please wait...")
 	}

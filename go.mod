@@ -30,7 +30,7 @@ require (
 	golang.org/x/crypto v0.0.0-20191219195013-becbf705a915 // indirect
 	golang.org/x/sys v0.0.0-20191220220014-0732a990476f // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20191220234730-f13409bbebaf // indirect
+	golang.org/x/tools v0.0.0-20191223184912-a7b3459f0428 // indirect
 	google.golang.org/grpc v1.21.1 // indirect
 	gopkg.in/src-d/go-git.v4 v4.12.0 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
