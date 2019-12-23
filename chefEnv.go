@@ -371,7 +371,6 @@ func setupChefWorkstationContainer(localIP string, exfilPort int, osTarget strin
 	if err != nil {
 		log.Fatalf("Could not get docker client: %v", err)
 	}
-
 	if UserInput.Debug {
 		log.Println("Building Workstation container, please wait...")
 	}
