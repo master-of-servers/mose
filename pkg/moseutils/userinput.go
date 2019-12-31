@@ -6,7 +6,6 @@ package moseutils
 
 import (
 	"encoding/json"
-	"github.com/fatih/color"
 	"log"
 	"path/filepath"
 )
@@ -52,14 +51,10 @@ type UserInput struct {
 }
 
 var (
-	// User Input
-	Cli          CliArgs
+	// Cli contains input from the command line
+	Cli CliArgs
+	// JSONSettings contains settings that are specified in settings.json
 	JSONSettings Settings
-
-	// Colorized output
-	errmsg = color.Red
-	info   = color.Yellow
-	msg    = color.Green
 
 	// CLI Parameters
 	osArch               string

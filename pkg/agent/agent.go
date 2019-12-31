@@ -4,8 +4,10 @@
 
 package agent
 
+// Agent holds the parameters that can be used by a payload
 type Agent struct {
 	Cmd                  string
+	Debug                bool
 	LocalIP              string
 	OsTarget             string
 	PayloadName          string

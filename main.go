@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -14,19 +15,14 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
+	"github.com/l50/MOSE/pkg/chefutils"
 	"github.com/l50/MOSE/pkg/moseutils"
 	utils "github.com/l50/goutils"
 )
 
 var (
-	UserInput     moseutils.UserInput
-
-	// Colorized output
-	errmsg         = color.Red
-	info           = color.Yellow
-	msg            = color.Green
+	UserInput moseutils.UserInput
 )
 
 func generateParams() {
@@ -85,9 +81,9 @@ func generateParams() {
 
 func generatePayload() {
 	if UserInput.Cmd != "" {
-		msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.Cmd, strings.ToLower(UserInput.OSTarget))
+		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.Cmd, strings.ToLower(UserInput.OSTarget))
 	} else {
-		msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.FileUpload, strings.ToLower(UserInput.OSTarget))
+		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.FileUpload, strings.ToLower(UserInput.OSTarget))
 	}
 
 	prevDir := utils.Gwd()
@@ -109,7 +105,7 @@ func generatePayload() {
 	}
 
 	if UserInput.FilePath != "" {
-		msg("Creating binary at: " + UserInput.FilePath)
+		moseutils.Msg("Creating binary at: " + UserInput.FilePath)
 		payload = UserInput.FilePath
 	}
 
@@ -143,14 +139,14 @@ func servePayload(port int, ssl bool) {
 	}
 
 	if UserInput.FileUpload != "" {
-		msg("File upload command specified, being served at %s://%s:%d/files.tar for %d seconds", proto, UserInput.LocalIP, port, UserInput.TimeToServe)
+		fmt.Printf("File upload command specified, payload being served at %s://%s:%d/files.tar for %d seconds\n", proto, UserInput.LocalIP, port, UserInput.TimeToServe)
 	} else {
-		msg("Payload being served at %s://%s:%d/%s-%s for %d seconds", proto, UserInput.LocalIP, port, UserInput.CMTarget, strings.ToLower(UserInput.OSTarget), UserInput.TimeToServe)
+		fmt.Printf("Payload being served at %s://%s:%d/%s-%s for %d seconds\n", proto, UserInput.LocalIP, port, UserInput.CMTarget, strings.ToLower(UserInput.OSTarget), UserInput.TimeToServe)
 	}
 
 	srv := moseutils.StartServer(port, "payloads", ssl, UserInput.SSLCertPath, UserInput.SSLKeyPath, time.Duration(UserInput.TimeToServe)*time.Second, true)
 
-	info("Web server shutting down...")
+	moseutils.Info("Web server shutting down...")
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Fatalln(err)
@@ -167,7 +163,7 @@ func main() {
 	if UserInput.FileUpload != "" {
 		targetBin := filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
 		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), targetBin}
-		log.Printf("Compressing files %v into payloads/files.tar", files)
+		moseutils.Info("Compressing files %v into payloads/files.tar", files)
 		moseutils.TarFiles(files, "payloads/files.tar")
 	}
 
@@ -177,26 +173,24 @@ func main() {
 	}
 
 	if UserInput.CMTarget == "chef" {
-		ans1, err := moseutils.AskUserQuestion("Is your target a chef workstation?", UserInput.OSTarget)
+		ans, err := moseutils.AskUserQuestion("Is your target a chef workstation? ", UserInput.OSTarget)
 		if err != nil {
 			log.Fatal("Quitting")
 		}
-		if ans1 {
-			log.Println("Nothing left to do on this system, continue all remaining activities on the target workstation.")
+		if ans {
+			moseutils.Info("Nothing left to do locally, continue all remaining activities on the target workstation.")
 			os.Exit(0)
 		}
 
-		ans2, err := moseutils.AskUserQuestion("Is your target a chef server?", UserInput.OSTarget)
+		ans, err = moseutils.AskUserQuestion("Is your target a chef server? ", UserInput.OSTarget)
 		if err != nil {
 			log.Fatal("Quitting")
 		}
-		if ans2 {
-			setupChefWorkstationContainer(UserInput.LocalIP, UserInput.ExfilPort, UserInput.OSTarget)
+		if ans {
+			chefutils.SetupChefWorkstationContainer(UserInput)
 			os.Exit(0)
-		}
-
-		if !ans1 && !ans2 {
-			log.Printf("Invalid chef target")
+		} else {
+			moseutils.ErrMsg("Invalid chef target")
 		}
 	}
 }
