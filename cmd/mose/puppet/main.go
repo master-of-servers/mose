@@ -17,8 +17,8 @@ import (
 	"text/template"
 
 	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/MOSE/pkg/moseutils"
 	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 type eyamlKeys struct {
@@ -370,9 +370,9 @@ func main() {
 
 		moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
 		backdoorManifest(manifestLoc)
-		createModule(manifestLoc, moduleName, cmd)
 		modules := getModules(getPuppetCodeLoc(manifestLoc) + "/modules")
 		moseutils.Info("The following modules were found: %v", modules)
+		createModule(manifestLoc, moduleName, cmd)
 	}
 	agents := getAgents()
 	moseutils.Info("The following puppet agents were identified: %q", agents)

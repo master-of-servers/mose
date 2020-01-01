@@ -1,4 +1,4 @@
-module github.com/l50/MOSE
+module github.com/master-of-servers/mose
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
@@ -25,12 +25,10 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/rogpeppe/go-internal v1.5.1 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	golang.org/x/crypto v0.0.0-20191219195013-becbf705a915 // indirect
-	golang.org/x/sys v0.0.0-20191220220014-0732a990476f // indirect
+	golang.org/x/crypto v0.0.0-20191227163750-53104e6ec876 // indirect
+	golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20191223184912-a7b3459f0428 // indirect
 	google.golang.org/grpc v1.21.1 // indirect
 	gopkg.in/src-d/go-git.v4 v4.12.0 // indirect
 	gotest.tools v2.2.0+incompatible // indirect

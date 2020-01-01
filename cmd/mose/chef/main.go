@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/MOSE/pkg/chefutils"
-	"github.com/l50/MOSE/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/chefutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 	utils "github.com/l50/goutils"
 )
 

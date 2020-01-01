@@ -24,7 +24,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/MOSE/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 	"github.com/mholt/archiver"
 )
 

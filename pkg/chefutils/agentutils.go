@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/l50/MOSE/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 // TargetAgents allows a user to select specific chef agents, or return them all as a []string
