@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -274,7 +274,7 @@ func getSecretKeys() map[string]*eyamlKeys {
 
 func findHieraSecrets() {
 	// Detect if the eyaml binary exists
-	exists, eyamlFile := moseutils.FindBin("eyaml", []string{"/bin", "/home", "/opt", "/root", "/usr"})
+	exists, eyamlFile := moseutils.FindFile("eyaml", []string{"/bin", "/home", "/opt", "/root", "/usr"})
 	if !exists {
 		log.Printf("Eyaml not found, no need to find secrets")
 		return

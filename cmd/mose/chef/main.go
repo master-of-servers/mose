@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -24,11 +24,12 @@ import (
 	"time"
 
 	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
-	utils "github.com/l50/goutils"
 )
 
+// Command holds information used to run commands on a target chef system
 type Command struct {
 	CmdName  string
 	Cmd      string
@@ -36,6 +37,7 @@ type Command struct {
 	FilePath string
 }
 
+// Metadata holds the payload name to run on a target chef system
 type Metadata struct {
 	PayloadName string
 }
@@ -536,7 +538,7 @@ func main() {
 		uploadFileName = suppliedFilename
 	}
 	// check if knife binary exists on server
-	found, knifeFile := moseutils.FindBin("knife", []string{"/bin", "/home", "/opt", "/root"})
+	found, knifeFile := moseutils.FindFile("knife", []string{"/bin", "/home", "/opt", "/root"})
 
 	if found {
 		if cleanup {
@@ -546,7 +548,7 @@ func main() {
 	}
 
 	moseutils.Info("Determining if we are on a chef server or an invalid target, please wait...")
-	found, chefServerFile := moseutils.FindBin("chef-server-ctl", []string{"/bin", "/home", "/opt", "/root"})
+	found, chefServerFile := moseutils.FindFile("chef-server-ctl", []string{"/bin", "/home", "/opt", "/root"})
 	if found {
 		chefServer(chefServerFile, chefFiles)
 	}

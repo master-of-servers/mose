@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -18,6 +18,7 @@ var (
 	fileUploaded chan bool
 )
 
+// GetHostname returns the hostname of the local system
 func GetHostname() string {
 	name, err := os.Hostname()
 	if err != nil {
@@ -26,6 +27,7 @@ func GetHostname() string {
 	return name
 }
 
+// GetLocalIP returns the IP address of the local system
 func GetLocalIP() (string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -73,6 +75,7 @@ func singleFile(h http.Handler) http.Handler {
 	})
 }
 
+// StartServer stands up a web server that can be used to serve files
 func StartServer(port int, webDir string, ssl bool, cert string, key string, waitTime time.Duration, singleServe bool) *http.Server {
 	fileUploaded = make(chan bool)
 	srv := &http.Server{Addr: ":" + strconv.Itoa(port)}

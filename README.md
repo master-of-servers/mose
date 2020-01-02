@@ -4,7 +4,7 @@
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/master-of-servers/MOSE/blob/master/LICENSE)
 [![Build Status](https://dev.azure.com/jaysonegrace/MOSE/_apis/build/status/master-of-servers.MOSE?branchName=master)](https://dev.azure.com/jaysonegrace/MOSE/_build/latest?definitionId=5&branchName=master)
 
-> Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+> Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 Under the terms of Contract DE-NA0003525 with NTESS, 
 the U.S. Government retains certain rights in this software
 

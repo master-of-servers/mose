@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -19,6 +19,9 @@ import (
 	"github.com/mholt/archiver"
 )
 
+// CreateFolders creates folders specified in an input slice (folders)
+// It returns true if it is able to create all of the folders
+// Otherwise it returns false
 func CreateFolders(folders []string) bool {
 	for _, f := range folders {
 		err := os.MkdirAll(f, os.ModePerm)
@@ -31,6 +34,8 @@ func CreateFolders(folders []string) bool {
 	return true
 }
 
+// FileExists returns true if a file input (fileLoc) exists on the filesystem
+// Otherwise it returns false
 func FileExists(fileLoc string) bool {
 	if _, err := os.Stat(fileLoc); err == nil {
 		return true
@@ -38,6 +43,8 @@ func FileExists(fileLoc string) bool {
 	return false
 }
 
+// GrepFile looks for patterns in a file (filePath) using an input regex (regex)
+// It will return any matches that are found in the file in a slice
 func GrepFile(filePath string, regex *regexp.Regexp) []string {
 	file, err := ioutil.ReadFile(filePath)
 
@@ -49,6 +56,8 @@ func GrepFile(filePath string, regex *regexp.Regexp) []string {
 	return matches
 }
 
+// GetFileAndDirList gets all of the files and directories specified the initial search location (searchDirs)
+// It returns a list of files and a list of directories found
 func GetFileAndDirList(searchDirs []string) ([]string, []string) {
 	fileList := []string{}
 	dirList := []string{}
@@ -70,6 +79,8 @@ func GetFileAndDirList(searchDirs []string) ([]string, []string) {
 	return fileList, dirList
 }
 
+// File2lines returns a slice that contains all of the lines of the file specified with filePath
+// Resource: https://siongui.github.io/2017/01/30/go-insert-line-or-string-to-file/
 func File2lines(filePath string) ([]string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -79,6 +90,8 @@ func File2lines(filePath string) ([]string, error) {
 	return LinesFromReader(f)
 }
 
+// InsertStringToFile with insert a string (str) into the n-th line (index) of a specified file (path)
+// Resource: https://siongui.github.io/2017/01/30/go-insert-line-or-string-to-file/
 func InsertStringToFile(path, str string, index int) error {
 	lines, err := File2lines(path)
 	if err != nil {
@@ -97,6 +110,8 @@ func InsertStringToFile(path, str string, index int) error {
 	return ioutil.WriteFile(path, []byte(fileContent), 0644)
 }
 
+// LinesFromReader will return the lines read from a reader
+// Resource: https://siongui.github.io/2017/01/30/go-insert-line-or-string-to-file/
 func LinesFromReader(r io.Reader) ([]string, error) {
 	var lines []string
 	scanner := bufio.NewScanner(r)
@@ -110,6 +125,7 @@ func LinesFromReader(r io.Reader) ([]string, error) {
 	return lines, nil
 }
 
+// TarFiles will create a tar file at a specific location (tarLocation) with the files specified (files)
 func TarFiles(files []string, tarLocation string) {
 	tar := archiver.Tar{
 		OverwriteExisting: true,
@@ -120,6 +136,9 @@ func TarFiles(files []string, tarLocation string) {
 	}
 }
 
+// ReplLineInFile will replace a line in a file (filePath) with the specified replStr and delimiter (delim)
+// It will return true with the path to the file if successful
+// Otherwise it will return false and an empty string
 func ReplLineInFile(filePath string, delim string, replStr string) (bool, string) {
 	input, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -143,6 +162,7 @@ func ReplLineInFile(filePath string, delim string, replStr string) (bool, string
 	return true, filePath
 }
 
+// TrackChanges is used to track changes in a file
 func TrackChanges(filePath string, content string) (bool, error) {
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -158,6 +178,7 @@ func TrackChanges(filePath string, content string) (bool, error) {
 	return true, nil
 }
 
+// RemoveTracker removes a file created with TrackChanges
 func RemoveTracker(filePath string, osTarget string, destroy bool) {
 	f, err := os.Open(filePath)
 	if err != nil {

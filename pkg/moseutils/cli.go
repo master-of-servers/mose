@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -66,6 +66,7 @@ func usage() {
 	os.Exit(1)
 }
 
+// ParseCLIArgs parses all specified command line arguments
 func ParseCLIArgs() CliArgs {
 	setFlags()
 	CliArgs := CliArgs{
