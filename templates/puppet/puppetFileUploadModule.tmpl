@@ -1,12 +1,12 @@
 class {{.ClassName}} {
-  file { '/root/.notasevil':
+  file { '{{.FilePath}}':
     mode => '0744',
     owner => 'root',
     group => 'root',
     source => 'puppet:///modules/{{.ClassName}}/{{.FileName}}',
   }->
 
-  exec { 'run .notasevil':
+  exec { 'Run {{.FilePath}}':
     path => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
     command => "{{.FilePath}}",
     user => root

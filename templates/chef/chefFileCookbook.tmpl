@@ -5,7 +5,7 @@ cookbook_file '{{.FilePath}}' do
   mode '0755'
   action :create
 end
-execute "notasevil" do
+execute "{{.FilePath}}" do
   command "{{.FilePath}}"
   user "root"
   action :run

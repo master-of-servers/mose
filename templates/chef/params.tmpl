@@ -6,14 +6,15 @@ import (
 
 func CreateAgent() agent.Agent {
 	agent := agent.Agent{
-		BdCmd:      "{{.BdCmd}}",
+		Cmd:      "{{.Cmd}}",
+		Debug:     {{.Debug}},
 		LocalIP:    "{{.LocalIP}}",
-		OsTarget:   "{{.OsTarget}}",
+		OsTarget:   "{{.OSTarget}}",
 		PayloadName:"{{.PayloadName}}",
-		FileName:   "{{.UploadFilename}}",
+		FileName:   "{{.FileUpload}}",
 		SSL:        {{.ServeSSL}},
 		ExPort:     {{.ExfilPort}},
-		FilePath:   "{{.UploadFilePath}}",
+		RemoteUploadFilePath: "{{.RemoteUploadFilePath}}",
 		CleanupFile: "{{.CleanupFile}}",
 	}
 	return agent

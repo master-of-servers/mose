@@ -7,6 +7,7 @@ package moseutils
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -25,7 +26,7 @@ func CreateFolders(folders []string) bool {
 			log.Println(err)
 			return false
 		}
-		log.Printf("Creating folder %s", f)
+		fmt.Printf("Creating folder %s\n", f)
 	}
 	return true
 }
@@ -177,7 +178,7 @@ func RemoveTracker(filePath string, osTarget string, destroy bool) {
 		if !destroy {
 			ans, err = AskUserQuestion("Would you like to remove this file/folder "+filename, osTarget)
 			if err != nil {
-				log.Fatal("Quitting cleanup ...")
+				log.Fatal("Quitting cleanup...")
 			}
 		}
 		if ans || destroy {

@@ -118,8 +118,8 @@ steps:
   workingDirectory: "$(modulePath)"
 # End Chef
 
-- script: |
-   export GO111MODULE=on
-   go test -count=1 -v -race ./...
-  displayName: 'Run unit tests'
-  workingDirectory: "$(modulePath)"
+# - script: |
+#    export GO111MODULE=on
+#    go test -count=1 -v -race ./...
+#   displayName: 'Run unit tests'
+#   workingDirectory: "$(modulePath)"

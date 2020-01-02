@@ -1,15 +1,16 @@
 {
+	"chefClientKey" : "keys/admin.pem",
+	"chefNodeName": "admin",
+	"chefValidationKey" : "keys/my_org-validator.pem",
+	"cleanupFile" : "/root/.cleanup",
+	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
+	"imageName" : "mose/chef-workstation",
+	"puppetBackupLoc" : "",
+	"remoteHost" : "",
 	"sslCertPath": "data/mose.crt",
 	"sslKeyPath" : "data/mose.key",
-	"chefNodeName": "admin",
-	"chefClientKey" : "keys/admin.pem",
-	"chefValidationKey" : "keys/my_org-validator.pem",
-	"attackOrgName" : "my_org-validator",
+	"targetChefServer" : "chef-server",
 	"targetOrgName": "my_org",
-	"targetIP" : "chef-server",
-	"uploadFilePath": "/root/.definitelynotevil",
-	"cleanupFile" : "/root/.cleanup",
-	"puppetBackupLoc" : "",
-	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
-	"remoteHosts" : ""
+	"targetValidatorName" : "my_org-validator",
+	"uploadFilePath": "/root/.definitelynotevil"
 }

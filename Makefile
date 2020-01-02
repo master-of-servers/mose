@@ -6,7 +6,7 @@ build:
 	go build
 	mkdir -p payloads
 
-destroy:
+clean:
 	packr2 clean
 	
 setup-linter: ## Install all the build and lint dependencies

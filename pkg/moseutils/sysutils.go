@@ -38,7 +38,7 @@ func Cd(dir string) {
 // extensionList: slice with file extensions to check for
 // fileNames: slice with filenames to search for
 // Returns files found that meet the input criteria
-func FindFiles(locations []string, extensionList []string, fileNames []string, dirNames []string) ([]string, []string) {
+func FindFiles(locations []string, extensionList []string, fileNames []string, dirNames []string, debug bool) ([]string, []string) {
 	var foundFiles = make(map[string]int)
 	var foundDirs = make(map[string]int)
 	fileList, dirList := GetFileAndDirList(locations)
@@ -62,7 +62,7 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 			}
 		}
 	}
-	// If dirnames are supplied iterate through them
+	// If dirNames are supplied, iterate through them
 	for _, reg := range dirNames {
 		for _, dir := range dirList {
 			m, err := regexp.MatchString(reg, dir)
@@ -77,11 +77,14 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 			}
 		}
 	}
-	if len(foundDirs) == 0 && len(dirNames) > 0 {
-		log.Printf("No dirs found with names %#v", dirNames)
-	}
-	if len(foundFiles) == 0 && len(fileNames) > 0 {
-		log.Printf("Unable to find any files with names %#v", fileNames)
+
+	if debug {
+		if len(foundDirs) == 0 && len(dirNames) > 0 {
+			log.Printf("No dirs found with these names: %v", dirNames)
+		}
+		if len(foundFiles) == 0 && len(fileNames) > 0 {
+			log.Printf("Unable to find any files with these names: %v", fileNames)
+		}
 	}
 
 	foundFileKeys := make([]string, 0, len(foundFiles))

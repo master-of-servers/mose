@@ -10,32 +10,36 @@ import (
 	"os"
 )
 
+// Settings represents the configuration information found in settings.json
 type Settings struct {
-	SslCertPath       string
-	SslKeyPath        string
-	ChefNodeName      string
-	ChefClientKey     string
-	ChefValidationKey string
-	AttackOrgName     string
-	TargetOrgName     string
-	TargetIP          string
-	UploadFilePath    string
-	CleanupFile       string
-	PuppetBackupLoc   string
-	RemoteHosts       string
-	ContainerName     string
+	ChefClientKey       string
+	ChefNodeName        string
+	ChefValidationKey   string
+	CleanupFile         string
+	ContainerName       string
+	ImageName           string
+	PuppetBackupLoc     string
+	RemoteHost          string
+	SSLCertPath         string
+	SSLKeyPath          string
+	TargetChefServer    string
+	TargetOrgName       string
+	TargetValidatorName string
+	UploadFilePath      string
 }
 
-func LoadSettings(jsonFile string) Settings {
+// loadSettings will return the settings found in settings.json
+func loadSettings(jsonFile string) Settings {
 	file, err := os.Open(jsonFile)
 	if err != nil {
 		log.Fatalf("Error loading settings: %s", err)
 	}
 
-	settings := Settings{}
+	jsonSettings := Settings{}
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&settings); err != nil {
+	if err := decoder.Decode(&jsonSettings); err != nil {
 		log.Fatalf("Error decoding settings: %s", err)
 	}
-	return settings
+
+	return jsonSettings
 }

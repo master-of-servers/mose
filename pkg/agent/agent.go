@@ -4,15 +4,17 @@
 
 package agent
 
+// Agent holds the parameters that can be used by a payload
 type Agent struct {
-	BdCmd           string
-	LocalIP         string
-	OsTarget        string
-	PayloadName     string
-	FileName        string
-	SSL             bool
-	ExPort          int
-	FilePath        string
-	CleanupFile     string
-	PuppetBackupLoc string
+	Cmd                  string
+	Debug                bool
+	LocalIP              string
+	OsTarget             string
+	PayloadName          string
+	FileName             string
+	SSL                  bool
+	ExPort               int
+	RemoteUploadFilePath string
+	CleanupFile          string
+	PuppetBackupLoc      string
 }
