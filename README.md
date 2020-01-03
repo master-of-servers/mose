@@ -1,7 +1,7 @@
 # MOSE (Master Of SErvers)
 [![Dc27Badge](https://img.shields.io/badge/DEF%20CON-27-green)](https://defcon.org/html/defcon-27/dc-27-speakers.html#Grace)
-[![Go Report Card](https://goreportcard.com/badge/github.com/master-of-servers/MOSE)](https://goreportcard.com/badge/github.com/master-of-servers/MOSE)
-[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/master-of-servers/MOSE/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/master-of-servers/mose)](https://goreportcard.com/report/github.com/master-of-servers/mose)
+[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/master-of-servers/mose/blob/master/LICENSE)
 [![Build Status](https://dev.azure.com/jaysonegrace/MOSE/_apis/build/status/master-of-servers.MOSE?branchName=master)](https://dev.azure.com/jaysonegrace/MOSE/_build/latest?definitionId=5&branchName=master)
 
 > Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
