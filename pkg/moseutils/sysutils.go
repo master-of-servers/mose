@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// CpFile is used to copy a file from a source (src) to a destination (dst)
 func CpFile(src string, dst string) {
 	input, err := ioutil.ReadFile(src)
 	if err != nil {
@@ -26,6 +27,7 @@ func CpFile(src string, dst string) {
 	}
 }
 
+// Cd changes the directory to the one specified with dir
 func Cd(dir string) {
 	err := os.Chdir(dir)
 	if err != nil {
@@ -99,13 +101,16 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 	return foundFileKeys, foundDirsKeys
 }
 
-func FindBin(binName string, dirs []string) (bool, string) {
+// FindFile locates a file (fileName) in a list of input directories (dir)
+// If the file is found, then it returns true along with the file location
+// Otherwise it returns false with an empty string
+func FindFile(fileName string, dirs []string) (bool, string) {
 	fileList, _ := GetFileAndDirList(dirs)
 	for _, file := range fileList {
-		fileReg := `\b` + binName + `$\b`
+		fileReg := `\b` + fileName + `$\b`
 		m, err := regexp.MatchString(fileReg, file)
 		if err != nil {
-			log.Fatalf("We had an issue locating the %v binary: %v\n", fileReg, err)
+			log.Fatalf("We had an issue locating the %v file: %v\n", fileReg, err)
 		} else {
 			if m {
 				return true, file

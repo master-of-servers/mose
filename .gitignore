@@ -24,4 +24,5 @@ keys/
 # Packr files and directories
 packrd/
 main-packr.go
+pkg/chefutils/chefutils-packr.go
 params.go

@@ -65,11 +65,39 @@ steps:
   workingDirectory: "$(modulePath)"
 
 - script: | 
+    # Copy MOSE payload to puppet master
     docker cp $(modulePath)/payloads/puppet-linux basic-puppetmaster:/puppet-linux
+
+    # Run MOSE against the puppet master
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
+    # Run puppet agent -t to enact the changes made by MOSE
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
+
+    # Ensure that MOSE is working properly by running cat on the file it created
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
   displayName: 'Run MOSE generated payload on puppet test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: |
+    echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
+    export GO111MODULE=on
+    ./mose -fu ${PWD}/payloads/notevil.sh -t puppet -f ${PWD}/payloads/puppet-linux
+  displayName: 'Generate a puppet payload to test file upload'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to puppet master
+    docker cp $(modulePath)/payloads/files.tar basic-puppetmaster:/files.tar
+    
+    # Run MOSE against the puppet master
+    docker exec -i basic-puppetmaster /bin/bash -c "tar -xvf files.tar"
+    docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
+    # Run puppet agent -t to enact the changes made by MOSE
+    docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
+    
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/file_upload_test.txt"
+  displayName: 'Run MOSE generated file upload payload on puppet test environment'
   workingDirectory: "$(modulePath)"
 # End Puppet
 
@@ -115,6 +143,28 @@ steps:
     # Ensure that MOSE is working properly by running cat on the file it created
     docker exec -i basic-chef-agent-1 /bin/bash -c "cat /tmp/test.txt"
   displayName: 'Run MOSE generated payload on workstation in chef test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: |
+    echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
+    export GO111MODULE=on
+    expect scripts/test_chef_workstation_file_upload.exp
+  displayName: 'Generate a chef payload to test file upload'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to workstation
+    docker cp $(modulePath)/payloads/files.tar basic-chef-workstation:/files.tar
+    
+    # Run MOSE against the workstation
+    docker exec -i basic-chef-workstation /bin/bash -c "tar -xvf files.tar"
+    docker exec -i basic-chef-workstation /bin/bash -c "echo 'n' | /chef-linux"
+    # Run chef-client to enact the changes made by MOSE
+    docker exec -i basic-chef-agent-1 /bin/bash -c "chef-client"
+    
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-chef-agent-1 /bin/bash -c "cat /tmp/file_upload_test.txt"
+  displayName: 'Run MOSE generated file upload payload on workstation in chef test environment'
   workingDirectory: "$(modulePath)"
 # End Chef
 

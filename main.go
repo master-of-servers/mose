@@ -1,4 +1,4 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
@@ -16,9 +16,9 @@ import (
 	"time"
 
 	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
-	utils "github.com/l50/goutils"
 )
 
 var (
