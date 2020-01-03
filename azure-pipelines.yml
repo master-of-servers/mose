@@ -168,6 +168,21 @@ steps:
   workingDirectory: "$(modulePath)"
 # End Chef
 
+# Salt 
+- script: |
+    git clone https://github.com/master-of-servers/salt-test-lab.git
+    cd salt-test-lab && cd basic
+    docker-compose up -d --build
+    sleep 60
+    # Fix pillar issue
+    docker exec -it salt-master /bin/bash -c "salt '*' saltutil.refresh_pillar"
+    # Enroll minion with salt master
+    docker exec -i salt-master /bin/bash -c "salt '*' state.apply hello"
+    docker exec -i salt-master /bin/bash  -c "salt '*' pillar.items"
+  displayName: 'Build and configure salt test environment'
+  workingDirectory: "$(modulePath)"
+# End Salt
+
 # - script: |
 #    export GO111MODULE=on
 #    go test -count=1 -v -race ./...
