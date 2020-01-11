@@ -37,13 +37,13 @@ type command struct {
 var (
 	a               = CreateAgent()
 	cleanup         bool
+	cleanupFile     = a.CleanupFile
 	cmd             = a.Cmd
 	debug           = a.Debug
 	osTarget        = a.OsTarget
 	moduleName      = a.PayloadName
 	uploadFileName  = a.FileName
 	uploadFilePath  = a.RemoteUploadFilePath
-	cleanupFile     = a.CleanupFile
 	puppetBackupLoc = a.PuppetBackupLoc
 )
 
