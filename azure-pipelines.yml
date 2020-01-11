@@ -175,10 +175,10 @@ steps:
     docker-compose up -d --build
     sleep 60
     # Fix pillar issue
-    docker exec -it salt-master /bin/bash -c "salt '*' saltutil.refresh_pillar"
+    docker exec -it basic-salt-master /bin/bash -c "salt '*' saltutil.refresh_pillar"
     # Enroll minion with salt master
-    docker exec -i salt-master /bin/bash -c "salt '*' state.apply hello"
-    docker exec -i salt-master /bin/bash  -c "salt '*' pillar.items"
+    docker exec -i basic-salt-master /bin/bash -c "salt '*' state.apply"
+    docker exec -i basic-salt-master /bin/bash  -c "salt '*' pillar.items"
   displayName: 'Build and configure salt test environment'
   workingDirectory: "$(modulePath)"
 # End Salt
