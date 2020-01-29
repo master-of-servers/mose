@@ -9,7 +9,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
-	github.com/fatih/color v1.7.0
+	github.com/fatih/color v1.9.0
 	github.com/gobuffalo/envy v1.8.1 // indirect
 	github.com/gobuffalo/logger v1.0.3 // indirect
 	github.com/gobuffalo/packr/v2 v2.7.1
