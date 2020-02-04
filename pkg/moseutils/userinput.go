@@ -34,6 +34,7 @@ type UserInput struct {
 	TimeToServe          int
 
 	// Settings
+	AnsibleBackupLoc    string
 	ChefClientKey       string
 	ChefNodeName        string
 	ChefValidationKey   string
@@ -84,7 +85,7 @@ func processInput() {
 		Cli.Rhost = JSONSettings.RemoteHost
 	}
 	if Cli.FileUpload != "" {
-		Cli.FileUpload = filepath.Base(Cli.FileUpload)
+		Cli.FileUpload, _ = filepath.Abs(Cli.FileUpload)
 	}
 	if Cli.Debug {
 		log.Print("JSON configuration loaded with the following values")
@@ -100,6 +101,7 @@ func processInput() {
 func GetUserInput() UserInput {
 	processInput()
 	var UserInput = UserInput{
+		AnsibleBackupLoc:     JSONSettings.AnsibleBackupLoc,
 		ChefClientKey:        JSONSettings.ChefClientKey,
 		ChefNodeName:         JSONSettings.ChefNodeName,
 		ChefValidationKey:    JSONSettings.ChefValidationKey,

@@ -81,7 +81,7 @@ steps:
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
-    ./mose -fu ${PWD}/payloads/notevil.sh -t puppet -f ${PWD}/payloads/puppet-linux
+    ./mose -fu payloads/notevil.sh -t puppet -f ${PWD}/payloads/puppet-linux
   displayName: 'Generate a puppet payload to test file upload'
   workingDirectory: "$(modulePath)"
 
@@ -167,6 +167,30 @@ steps:
   displayName: 'Run MOSE generated file upload payload on workstation in chef test environment'
   workingDirectory: "$(modulePath)"
 # End Chef
+
+# Ansible
+- script: |
+    git clone https://github.com/master-of-servers/ansible-test-lab.git
+    cd ansible-test-lab && cd basic
+    bash files/create_ssh_key.sh
+    cp files/authorized_keys control/files
+    cp files/id_rsa control/files
+    cp files/id_rsa.pub control/files
+    cp files/authorized_keys managed/files
+    cp files/id_rsa managed/files
+    cp files/id_rsa.pub managed/files
+    docker-compose up -d --force-recreate --build
+    echo "Decrypting the vault file"
+    docker exec -i basic-control-node ansible-vault decrypt /root/.ansible/group_vars/vault
+    docker exec -i basic-control-node cat /root/.ansible/group_vars/vault
+    echo "Encrypting the vault file"
+    docker exec -i basic-control-node ansible-vault encrypt /root/.ansible/group_vars/vault
+    docker exec -i basic-control-node cat /root/.ansible/group_vars/vault
+    echo "Applying the hello playbook to the managed node"
+    docker exec -i basic-control-node bash -c "cd ~/.ansible && ansible-playbook site.yml"
+  displayName: 'Build and configure ansible test environment'
+  workingDirectory: "$(modulePath)"
+# End Ansible
 
 # Salt 
 - script: |

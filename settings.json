@@ -1,4 +1,5 @@
 {
+	"ansibleBackupLoc" : "",
 	"chefClientKey" : "keys/admin.pem",
 	"chefNodeName": "admin",
 	"chefValidationKey" : "keys/my_org-validator.pem",

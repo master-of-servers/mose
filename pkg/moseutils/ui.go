@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -34,6 +35,42 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 			return false, nil
 		} else {
 			ErrMsg("Invalid input")
+		}
+	}
+}
+
+func IndexedUserQuestion(question string, osTarget string, validIndices map[int]bool) (map[int]bool, error) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		var err error
+		fmt.Println(question + "(Provide answer as comma seperated)")
+		text, _ := reader.ReadString('\n')
+		if strings.Contains(text, "q") {
+			return nil, errors.New("Quit")
+		} else {
+			if osTarget == "windows" {
+				text = text[:len(text)-2]
+			} else {
+				text = text[:len(text)-1]
+			}
+			strnums := strings.Split(text, ",")
+			nums := make(map[int]bool)
+			for _, n := range strnums {
+				n = strings.TrimSpace(n)
+				num, e := strconv.Atoi(n)
+				if e != nil {
+					fmt.Println("Number provided is not an integer, ...")
+					err = e
+				} else if !validIndices[num] {
+					fmt.Printf("Number is not valid see %v", validIndices)
+					err = errors.New("Number is not within index")
+				} else {
+					nums[num] = true
+				}
+			}
+			if err == nil && len(nums) > 0 {
+				return nums, nil
+			}
 		}
 	}
 }

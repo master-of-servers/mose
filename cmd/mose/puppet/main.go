@@ -139,7 +139,7 @@ func backupManifest(manifestLoc string) {
 		path = filepath.Join(puppetBackupLoc, filepath.Base(manifestLoc))
 	}
 	if !moseutils.FileExists(path + ".bak.mose") {
-		moseutils.CpFile(manifestLoc, path+".bak.mose")
+		_ = moseutils.CpFile(manifestLoc, path+".bak.mose")
 		return
 	}
 	fmt.Printf("Backup of the manifest (%v.bak.mose) already exists.\n", manifestLoc)
@@ -177,7 +177,7 @@ func getPuppetCodeLoc(manifestLoc string) string {
 func generateModule(moduleManifest string, cmd string) bool {
 	puppetCommand := command{
 		ClassName: moduleName,
-		CmdName:   "cmd",
+		CmdName:   moduleName,
 		Cmd:       cmd,
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
@@ -232,7 +232,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 
 			moseutils.CreateFolders([]string{moduleFiles})
 			fmt.Printf("Copying %s to module location %s\n", uploadFileName, moduleFiles)
-			moseutils.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
+			_ = moseutils.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(moduleFiles, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
@@ -338,7 +338,7 @@ func doCleanup(manifestLocs []string) {
 			}
 		}
 		if ans || ans2 {
-			moseutils.CpFile(path, manifestLoc)
+			_ = moseutils.CpFile(path, manifestLoc)
 			os.Remove(path)
 		}
 	}

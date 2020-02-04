@@ -16,6 +16,7 @@ knife.rb
 /mose
 chef-linux
 puppet-linux
+ansible-linux
 
 # Application-generated folders
 payloads/

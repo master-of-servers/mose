@@ -8,23 +8,27 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
 // CpFile is used to copy a file from a source (src) to a destination (dst)
-func CpFile(src string, dst string) {
+// If there is a failure to do so, an error is returned
+func CpFile(src string, dst string) error {
 	input, err := ioutil.ReadFile(src)
 	if err != nil {
-		log.Println(err)
-		return
+		log.Printf("Error reading from %s: %v", src, err)
+		return err
 	}
 
 	err = ioutil.WriteFile(dst, input, 0644)
 	if err != nil {
-		log.Printf("Error creating %v: %v", dst, err)
-		return
+		log.Printf("Error writing to %s: %v", dst, err)
+		return err
 	}
+	return nil
 }
 
 // Cd changes the directory to the one specified with dir
@@ -35,16 +39,17 @@ func Cd(dir string) {
 	}
 }
 
-// FindFiles finds based on their file extension in specified directories
-// locations: slice with locations to search for files
-// extensionList: slice with file extensions to check for
-// fileNames: slice with filenames to search for
+// FindFiles finds files based on their extension in specified directories
+// locations - where to search for files
+// extensionList - file extensions to search for
+// fileNames - filenames to search for
+// dirNames - directory names to search for (optional)
 // Returns files found that meet the input criteria
-func FindFiles(locations []string, extensionList []string, fileNames []string, dirNames []string, debug bool) ([]string, []string) {
+func FindFiles(locations []string, extensionList []string, fileNames []string, dirNames []string) ([]string, []string) {
 	var foundFiles = make(map[string]int)
 	var foundDirs = make(map[string]int)
 	fileList, dirList := GetFileAndDirList(locations)
-	// if filenames are supplied, then iterate through them
+	//  iterate through filenames if they are provided
 	for _, fileContains := range fileNames {
 		for _, file := range fileList {
 			if strings.Contains(file, fileContains) {
@@ -54,7 +59,7 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 			}
 		}
 	}
-	// if extensionList is supplied iterated through them
+	// iterate through the extensionList (if it's provided)s
 	for _, ext := range extensionList {
 		for _, file := range fileList {
 			if strings.HasSuffix(file, ext) {
@@ -64,7 +69,7 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 			}
 		}
 	}
-	// If dirNames are supplied, iterate through them
+	// iterate through dirNames (if they're provided)
 	for _, reg := range dirNames {
 		for _, dir := range dirList {
 			m, err := regexp.MatchString(reg, dir)
@@ -80,13 +85,11 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 		}
 	}
 
-	if debug {
-		if len(foundDirs) == 0 && len(dirNames) > 0 {
-			log.Printf("No dirs found with these names: %v", dirNames)
-		}
-		if len(foundFiles) == 0 && len(fileNames) > 0 {
-			log.Printf("Unable to find any files with these names: %v", fileNames)
-		}
+	if len(foundDirs) == 0 && len(dirNames) > 0 {
+		log.Printf("No dirs found with these names: %v", dirNames)
+	}
+	if len(foundFiles) == 0 && len(fileNames) > 0 {
+		log.Printf("Unable to find any files with these names: %v", fileNames)
 	}
 
 	foundFileKeys := make([]string, 0, len(foundFiles))
@@ -107,7 +110,7 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 func FindFile(fileName string, dirs []string) (bool, string) {
 	fileList, _ := GetFileAndDirList(dirs)
 	for _, file := range fileList {
-		fileReg := `\b` + fileName + `$\b`
+		fileReg := `/` + fileName + `$`
 		m, err := regexp.MatchString(fileReg, file)
 		if err != nil {
 			log.Fatalf("We had an issue locating the %v file: %v\n", fileReg, err)
@@ -118,4 +121,28 @@ func FindFile(fileName string, dirs []string) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+// CreateFilePath will create a file specified
+// Check prefixes of path that normal filepath package won't expand inherantly
+// if it matches any prefix $HOME, ~/, / then we need to treat them seperately
+func CreateFilePath(text string, baseDir string) (string, error) {
+	var path string
+	_, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	if filepath.HasPrefix(text, "~/") || filepath.HasPrefix(text, "$HOME") {
+		path = filepath.Base(text)
+		_, path = FindFile(path, []string{"/root", "/home"})
+	} else if filepath.HasPrefix(text, "/") {
+		path = text
+	} else {
+		path, err = filepath.Abs(filepath.Join(baseDir, text))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return path, nil
 }
