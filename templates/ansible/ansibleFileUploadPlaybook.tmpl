@@ -1,0 +1,8 @@
+---
+- name: {{.CmdName}}
+  copy:
+    src: "{{`{{ role_path }}`}}/files/{{.FileName}}"
+    dest: "/tmp/{{.FileName}}"
+    mode: 0744
+- name: Run {{.CmdName}}
+  shell: "/tmp/{{.FileName}}"

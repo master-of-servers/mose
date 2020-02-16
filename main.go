@@ -27,6 +27,8 @@ var (
 )
 
 func generateParams() {
+	var origFileUpload string
+
 	paramLoc := filepath.Join("templates", UserInput.CMTarget)
 	box := packr.New("Params", "|")
 	box.ResolutionDir = paramLoc
@@ -49,10 +51,18 @@ func generateParams() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
+	// Temporarily set UserInput.FileUpload to the name of the file uploaded to avoid pathing issues in the payload
+	if UserInput.FileUpload != "" {
+		origFileUpload = UserInput.FileUpload
+		UserInput.FileUpload = filepath.Base(UserInput.FileUpload)
+	}
 	err = t.Execute(f, UserInput)
 
 	f.Close()
+
+	if UserInput.FileUpload != "" {
+		UserInput.FileUpload = origFileUpload
+	}
 
 	if err != nil {
 		log.Fatal("Execute: ", err)
@@ -78,13 +88,18 @@ func generateParams() {
 	if !UserInput.ServeSSL && UserInput.WebSrvPort == 443 {
 		UserInput.WebSrvPort = 8090
 	}
+
+	// Put it back
+	if UserInput.FileUpload != "" {
+		UserInput.FileUpload = origFileUpload
+	}
 }
 
 func generatePayload() {
 	if UserInput.Cmd != "" {
 		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.Cmd, strings.ToLower(UserInput.OSTarget))
 	} else {
-		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.FileUpload, strings.ToLower(UserInput.OSTarget))
+		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, filepath.Base(UserInput.FileUpload), strings.ToLower(UserInput.OSTarget))
 	}
 
 	prevDir := utils.Gwd()
@@ -100,21 +115,31 @@ func generatePayload() {
 		}
 	}
 
-	if UserInput.FileUpload != "" && UserInput.FilePath == "" {
-		log.Printf("File Upload specified, copying file to payloads directory.")
-		moseutils.CpFile(UserInput.FileUpload, filepath.Join("../../../payloads", filepath.Base(UserInput.FileUpload)))
+	// If FileUpload is specified, we need to copy it into place
+	if UserInput.FileUpload != "" {
+		err := moseutils.CpFile(UserInput.FileUpload, filepath.Join("../../../payloads", filepath.Base(UserInput.FileUpload)))
+		if err != nil {
+			log.Fatalf("Failed to copy input file upload (%v): %v, exiting", UserInput.FileUpload, err)
+		}
 	}
 
-	if UserInput.FilePath != "" {
+	// FilePath specified with command to run
+	if UserInput.FilePath != "" && UserInput.FileUpload == "" {
 		moseutils.Msg("Creating binary at: " + UserInput.FilePath)
 		payload = UserInput.FilePath
+	}
+
+	// FilePath used as tar output location in conjunction with FileUpload
+	if UserInput.FilePath != "" && UserInput.FileUpload != "" {
+		moseutils.Msg("File Upload specified, copying file to payloads directory. FilePath supplied, tar file will be located at specified location")
+		moseutils.CpFile(UserInput.FileUpload, filepath.Join("../../../payloads", filepath.Base(UserInput.FileUpload)))
 	}
 
 	_, err := utils.RunCommand("env", "GOOS="+strings.ToLower(UserInput.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload)
 
 	if UserInput.Debug {
 		log.Printf("Current directory: %s", utils.Gwd())
-		log.Printf("env GOOS=" + strings.ToLower(UserInput.OSTarget) + " GOARCH=amd64" + " go" + " build" + " -o " + payload)
+		log.Printf("Command to generate the payload: env GOOS=" + strings.ToLower(UserInput.OSTarget) + " GOARCH=amd64" + " go" + " build" + " -o " + payload)
 	}
 	if err != nil {
 		log.Fatalf("Error running the command to generate the target payload: %v", err)
@@ -164,8 +189,25 @@ func main() {
 	if UserInput.FileUpload != "" {
 		targetBin := filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
 		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), targetBin}
-		moseutils.Info("Compressing files %v into payloads/files.tar", files)
-		moseutils.TarFiles(files, "payloads/files.tar")
+		archiveLoc := "payloads/files.tar"
+		if UserInput.FilePath != "" {
+			archiveLoc = UserInput.FilePath
+		}
+
+		// Specify tar for the archive type if no extension is defined
+		if filepath.Ext(archiveLoc) == "" {
+			archiveLoc = archiveLoc + ".tar"
+		}
+
+		moseutils.Info("Compressing files %v into %s", files, archiveLoc)
+
+		loc, err := moseutils.ArchiveFiles(files, archiveLoc)
+		if err != nil {
+			moseutils.ErrMsg("Error generating archive file", err)
+		}
+		if UserInput.Debug {
+			log.Printf("Archive file created at %s", loc)
+		}
 	}
 
 	// If the user hasn't specified to output the payload to a file, then serve it

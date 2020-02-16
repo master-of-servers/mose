@@ -12,6 +12,7 @@ import (
 
 // Settings represents the configuration information found in settings.json
 type Settings struct {
+	AnsibleBackupLoc    string
 	ChefClientKey       string
 	ChefNodeName        string
 	ChefValidationKey   string

@@ -194,7 +194,8 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 			moseutils.Msg("Successfully created files directory at location %s for file %s", filesLoc, uploadFileName)
 
 			// Maybe assume it isn't in current directory?
-			moseutils.CpFile(uploadFileName, filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+			_ = moseutils.CpFile(uploadFileName, filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+
 			_, err = moseutils.TrackChanges(cleanupFile, uploadFilePath)
 
 			if err != nil {
@@ -204,7 +205,7 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 			if err := os.Chmod(filepath.Join(filesLoc, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
-			moseutils.Msg("Successfully copied and chmod file %s", filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+			moseutils.Msg("Successfully copied and set permissions for %s", filepath.Join(filesLoc, filepath.Base(uploadFileName)))
 		}
 	}
 
@@ -525,7 +526,7 @@ func main() {
 	// If we're not root, we probably can't backdoor any of the chef code, so exit
 	utils.CheckRoot()
 
-	chefFiles, chefDirs := moseutils.FindFiles([]string{"/etc/chef", "/home", "/root"}, []string{".pem"}, []string{"config.rb", "knife.rb"}, []string{`\/cookbooks$`}, debug)
+	chefFiles, chefDirs := moseutils.FindFiles([]string{"/etc/chef", "/home", "/root"}, []string{".pem"}, []string{"config.rb", "knife.rb"}, []string{`\/cookbooks$`})
 
 	if len(chefFiles) == 0 {
 		log.Fatalln("Unable to find any chef files, exiting.")
