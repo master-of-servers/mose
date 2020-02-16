@@ -526,7 +526,7 @@ func main() {
 	// If we're not root, we probably can't backdoor any of the chef code, so exit
 	utils.CheckRoot()
 
-	chefFiles, chefDirs := moseutils.FindFiles([]string{"/etc/chef", "/home", "/root"}, []string{".pem"}, []string{"config.rb", "knife.rb"}, []string{`\/cookbooks$`}, debug)
+	chefFiles, chefDirs := moseutils.FindFiles([]string{"/etc/chef", "/home", "/root"}, []string{".pem"}, []string{"config.rb", "knife.rb"}, []string{`\/cookbooks$`})
 
 	if len(chefFiles) == 0 {
 		log.Fatalln("Unable to find any chef files, exiting.")

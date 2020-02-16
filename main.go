@@ -60,6 +60,10 @@ func generateParams() {
 
 	f.Close()
 
+	if UserInput.FileUpload != "" {
+		UserInput.FileUpload = origFileUpload
+	}
+
 	if err != nil {
 		log.Fatal("Execute: ", err)
 	}
@@ -119,9 +123,16 @@ func generatePayload() {
 		}
 	}
 
-	if UserInput.FilePath != "" {
+	// FilePath specified with command to run
+	if UserInput.FilePath != "" && UserInput.FileUpload == "" {
 		moseutils.Msg("Creating binary at: " + UserInput.FilePath)
 		payload = UserInput.FilePath
+	}
+
+	// FilePath used as tar output location in conjunction with FileUpload
+	if UserInput.FilePath != "" && UserInput.FileUpload != "" {
+		moseutils.Msg("File Upload specified, copying file to payloads directory. FilePath supplied, tar file will be located at specified location")
+		moseutils.CpFile(UserInput.FileUpload, filepath.Join("../../../payloads", filepath.Base(UserInput.FileUpload)))
 	}
 
 	_, err := utils.RunCommand("env", "GOOS="+strings.ToLower(UserInput.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload)
@@ -178,8 +189,25 @@ func main() {
 	if UserInput.FileUpload != "" {
 		targetBin := filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
 		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), targetBin}
-		moseutils.Info("Compressing files %v into payloads/files.tar", files)
-		moseutils.TarFiles(files, "payloads/files.tar")
+		archiveLoc := "payloads/files.tar"
+		if UserInput.FilePath != "" {
+			archiveLoc = UserInput.FilePath
+		}
+
+		// Specify tar for the archive type if no extension is defined
+		if filepath.Ext(archiveLoc) == "" {
+			archiveLoc = archiveLoc + ".tar"
+		}
+
+		moseutils.Info("Compressing files %v into %s", files, archiveLoc)
+
+		loc, err := moseutils.ArchiveFiles(files, archiveLoc)
+		if err != nil {
+			moseutils.ErrMsg("Error generating archive file", err)
+		}
+		if UserInput.Debug {
+			log.Printf("Archive file created at %s", loc)
+		}
 	}
 
 	// If the user hasn't specified to output the payload to a file, then serve it

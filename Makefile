@@ -16,19 +16,25 @@ fmt: ## gofmt and goimports all go files
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
 
 lint: ## Run all the linters
-	gometalinter --vendor --disable-all \
+	golangci-lint run \
+		--no-config \
+		--issues-exit-code=0 \
+		--timeout=30m \
+		--disable-all \
 		--enable=deadcode \
-		--enable=ineffassign \
-		--enable=staticcheck \
-		--enable=gofmt \
-		--enable=goimports \
-		--enable=dupl \
-		--enable=misspell \
+		--enable=gocyclo \
+		--enable=golint \
+		--enable=varcheck \
+		--enable=structcheck \
+		--enable=maligned \
 		--enable=errcheck \
-		--enable=vet \
-		--enable=vetshadow \
-		--deadline=10m \
-		./...
+		--enable=dupl \
+		--enable=ineffassign \
+		--enable=interfacer \
+		--enable=unconvert \
+		--enable=goconst \
+		--enable=gosec \
+		--enable=megacheck 
 	markdownfmt -w README.md
 
 test:

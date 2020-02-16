@@ -1,0 +1,13 @@
+#!/usr/bin/expect -f
+
+spawn /ansible-linux
+
+expect "Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. \[Y/n/q\]"
+send "Y\r"
+
+expect "Would you like to target all managed hosts? \[Y/n/q\]"
+send "n\r"
+
+expect "Provide the index of the location that you want to inject into the site.yml (ex. 1,3,...):"
+send "0\r"
+expect eof

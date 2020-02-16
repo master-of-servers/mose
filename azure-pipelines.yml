@@ -61,7 +61,7 @@ steps:
     # Enroll agent with puppet master
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t --waitforcert=120"
     docker ps
-  displayName: 'Build and configure puppet test environment'
+  displayName: 'Build and configure the puppet test environment'
   workingDirectory: "$(modulePath)"
 
 - script: | 
@@ -75,29 +75,29 @@ steps:
 
     # Ensure that MOSE is working properly by running cat on the file it created
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
-  displayName: 'Run MOSE generated payload on puppet test environment'
+  displayName: 'Run MOSE generated payload on the puppet test environment'
   workingDirectory: "$(modulePath)"
 
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
-    ./mose -fu payloads/notevil.sh -t puppet -f ${PWD}/payloads/puppet-linux
+    ./mose -fu payloads/notevil.sh -t puppet -f payloads/puppet-linux
   displayName: 'Generate a puppet payload to test file upload'
   workingDirectory: "$(modulePath)"
 
 - script: | 
     # Copy MOSE payload to puppet master
-    docker cp $(modulePath)/payloads/files.tar basic-puppetmaster:/files.tar
+    docker cp $(modulePath)/payloads/puppet-linux.tar basic-puppetmaster:/puppet-linux.tar
     
     # Run MOSE against the puppet master
-    docker exec -i basic-puppetmaster /bin/bash -c "tar -xvf files.tar"
+    docker exec -i basic-puppetmaster /bin/bash -c "tar -xvf puppet-linux.tar"
     docker exec -i basic-puppetmaster /bin/bash -c "echo 'Y' | /puppet-linux"
     # Run puppet agent -t to enact the changes made by MOSE
     docker exec -i basic-puppetagent /bin/bash -c "puppet agent -t"
     
     # Ensure that MOSE is working properly by running cat on the file it created
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/file_upload_test.txt"
-  displayName: 'Run MOSE generated file upload payload on puppet test environment'
+  displayName: 'Run MOSE generated file upload payload on the puppet test environment'
   workingDirectory: "$(modulePath)"
 # End Puppet
 
@@ -108,7 +108,7 @@ steps:
     sudo apt-get install -y expect
     export GO111MODULE=on
     expect scripts/test_chef_workstation.exp
-  displayName: 'Generate a chef payload for workstation in chef test environment'
+  displayName: 'Generate a chef payload for workstation in the chef test environment'
   workingDirectory: "$(modulePath)"
 
 - script: | 
@@ -120,7 +120,7 @@ steps:
     echo "Sleeping for 12 minutes (720 seconds) while waiting for the chef environment to finish building."
     sleep 720
     docker ps
-  displayName: 'Build and configure chef test environment'
+  displayName: 'Build and configure the chef test environment'
   workingDirectory: "$(modulePath)"
 
 - script: | 
@@ -142,7 +142,7 @@ steps:
     
     # Ensure that MOSE is working properly by running cat on the file it created
     docker exec -i basic-chef-agent-1 /bin/bash -c "cat /tmp/test.txt"
-  displayName: 'Run MOSE generated payload on workstation in chef test environment'
+  displayName: 'Run MOSE generated payload on workstation in the chef test environment'
   workingDirectory: "$(modulePath)"
 
 - script: |
@@ -154,21 +154,27 @@ steps:
 
 - script: | 
     # Copy MOSE payload to workstation
-    docker cp $(modulePath)/payloads/files.tar basic-chef-workstation:/files.tar
+    docker cp $(modulePath)/payloads/chef-linux.tar basic-chef-workstation:/chef-linux.tar
     
     # Run MOSE against the workstation
-    docker exec -i basic-chef-workstation /bin/bash -c "tar -xvf files.tar"
+    docker exec -i basic-chef-workstation /bin/bash -c "tar -xvf chef-linux.tar"
     docker exec -i basic-chef-workstation /bin/bash -c "echo 'n' | /chef-linux"
     # Run chef-client to enact the changes made by MOSE
     docker exec -i basic-chef-agent-1 /bin/bash -c "chef-client"
     
     # Ensure that MOSE is working properly by running cat on the file it created
     docker exec -i basic-chef-agent-1 /bin/bash -c "cat /tmp/file_upload_test.txt"
-  displayName: 'Run MOSE generated file upload payload on workstation in chef test environment'
+  displayName: 'Run MOSE generated file upload payload on workstation in the chef test environment'
   workingDirectory: "$(modulePath)"
 # End Chef
 
 # Ansible
+- script: |
+    export GO111MODULE=on
+    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t ansible -f $(modulePath)/payloads/ansible-linux
+  displayName: 'Generate an ansible payload'
+  workingDirectory: "$(modulePath)"
+
 - script: |
     git clone https://github.com/master-of-servers/ansible-test-lab.git
     cd ansible-test-lab && cd basic
@@ -188,7 +194,51 @@ steps:
     docker exec -i basic-control-node cat /root/.ansible/group_vars/vault
     echo "Applying the hello playbook to the managed node"
     docker exec -i basic-control-node bash -c "cd ~/.ansible && ansible-playbook site.yml"
-  displayName: 'Build and configure ansible test environment'
+  displayName: 'Build and configure the ansible test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to ansible control node
+    docker cp $(modulePath)/payloads/ansible-linux basic-control-node:/ansible-linux
+    docker cp scripts/test_ansible_cmd.exp basic-control-node:/
+
+    # Run MOSE against the control node
+    docker exec -i basic-control-node /bin/bash -c "apt-get update -y"
+    docker exec -i basic-control-node /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata"
+    docker exec -i basic-control-node /bin/bash -c "apt-get install -y expect"
+    docker exec -i basic-control-node /bin/bash -c "expect /test_ansible_cmd.exp"
+    
+    # Run ansible-cookbook to enact the changes made by MOSE
+    docker exec -i basic-control-node /bin/bash -c "ansible-playbook /root/.ansible/site.yml"
+
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-managed-node /bin/bash -c "cat /tmp/test.txt"
+  displayName: 'Run MOSE generated payload on the ansible test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: |
+    echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
+    export GO111MODULE=on
+    ./mose -fu payloads/notevil.sh -t ansible -f payloads/ansible-linux
+  displayName: 'Generate an ansible payload to test file upload'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to ansible control node
+    docker cp $(modulePath)/payloads/ansible-linux.tar basic-control-node:/ansible-linux.tar
+    # Copy MOSE payload to ansible control node
+    docker cp scripts/test_ansible_file_upload.exp basic-control-node:/
+
+    # Run MOSE against the control node
+    docker exec -i basic-control-node /bin/bash -c "tar -xvf /ansible-linux.tar"
+    docker exec -i basic-control-node /bin/bash -c "expect /test_ansible_file_upload.exp"
+    
+    # Run ansible-cookbook to enact the changes made by MOSE
+    docker exec -i basic-control-node /bin/bash -c "ansible-playbook /root/.ansible/site.yml"
+    
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-managed-node /bin/bash -c "cat /tmp/test.txt"
+  displayName: 'Run MOSE generated file upload payload on the ansible test environment'
   workingDirectory: "$(modulePath)"
 # End Ansible
 
@@ -207,8 +257,8 @@ steps:
   workingDirectory: "$(modulePath)"
 # End Salt
 
-# - script: |
-#    export GO111MODULE=on
-#    go test -count=1 -v -race ./...
-#   displayName: 'Run unit tests'
-#   workingDirectory: "$(modulePath)"
+- script: |
+   export GO111MODULE=on
+   go test -count=1 -v -race ./...
+  displayName: 'Run unit tests'
+  workingDirectory: "$(modulePath)"

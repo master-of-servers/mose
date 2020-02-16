@@ -5,6 +5,7 @@
 package moseutils
 
 import (
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 )
 
 // CpFile is used to copy a file from a source (src) to a destination (dst)
@@ -39,6 +41,31 @@ func Cd(dir string) {
 	}
 }
 
+// GetUIDGid gets the uid and gid of a file
+func GetUIDGid(file string) (int, int, error) {
+	info, err := os.Stat(file)
+	if err != nil {
+		return -1, -1, err
+	}
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		UID := int(stat.Uid)
+		GID := int(stat.Gid)
+		return UID, GID, nil
+	}
+	return -1, -1, errors.New("Unable to retrieve UID and GID of file")
+}
+
+// ChownR recursively change owner of directory
+func ChownR(path string, uid int, gid int) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		_ = os.Chown(name, uid, gid)
+		return nil
+	})
+}
+
 // FindFiles finds files based on their extension in specified directories
 // locations - where to search for files
 // extensionList - file extensions to search for
@@ -49,7 +76,7 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 	var foundFiles = make(map[string]int)
 	var foundDirs = make(map[string]int)
 	fileList, dirList := GetFileAndDirList(locations)
-	//  iterate through filenames if they are provided
+	// iterate through filenames if they are provided
 	for _, fileContains := range fileNames {
 		for _, file := range fileList {
 			if strings.Contains(file, fileContains) {
@@ -124,8 +151,8 @@ func FindFile(fileName string, dirs []string) (bool, string) {
 }
 
 // CreateFilePath will create a file specified
-// Check prefixes of path that normal filepath package won't expand inherantly
-// if it matches any prefix $HOME, ~/, / then we need to treat them seperately
+// Check prefixes of path that normal filepath package won't expand inherently
+// if it matches any prefix $HOME, ~/, / then we need to treat them separately
 func CreateFilePath(text string, baseDir string) (string, error) {
 	var path string
 	_, err := user.Current()
