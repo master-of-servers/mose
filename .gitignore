@@ -18,6 +18,9 @@ chef-linux
 puppet-linux
 ansible-linux
 
+# pkged.go
+pkged.go
+
 # Application-generated folders
 payloads/
 keys/

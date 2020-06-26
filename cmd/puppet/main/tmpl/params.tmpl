@@ -1,4 +1,4 @@
-package main
+package  main
 
 import (
 	"github.com/master-of-servers/mose/pkg/agent"
@@ -6,15 +6,15 @@ import (
 
 func CreateAgent() agent.Agent {
 	agent := agent.Agent{
-		AnsibleBackupLoc: "{{.AnsibleBackupLoc}}",
-		CleanupFile: "{{.CleanupFile}}",
 		Cmd:      "{{.Cmd}}",
 		Debug:     {{.Debug}},
-		FileName:   "{{.FileUpload}}",
 		LocalIP:    "{{.LocalIP}}",
 		OsTarget:   "{{.OSTarget}}",
 		PayloadName: "{{.PayloadName}}",
+		FileName:   "{{.FileUpload}}",
 		RemoteUploadFilePath: "{{.RemoteUploadFilePath}}",
+		CleanupFile: "{{.CleanupFile}}",
+		PuppetBackupLoc: "{{.PuppetBackupLoc}}",
 	}
 	return agent
 }

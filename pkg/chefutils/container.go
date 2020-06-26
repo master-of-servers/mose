@@ -7,10 +7,10 @@ package chefutils
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/userinput"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
 	"path"
@@ -20,17 +20,18 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/gobuffalo/packr/v2"
-	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/markbates/pkger"
 	"github.com/mholt/archiver"
 )
 
 var (
 	signalChan chan os.Signal
-	userInput  moseutils.UserInput
+	userInput  userinput.UserInput
 )
 
 type knifeTemplateArgs struct {
@@ -50,19 +51,19 @@ func copyFiles(cli *client.Client, id string, files []string, tarLocation string
 	}
 
 	if err := tar.Archive(files, tarLocation); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	reader, err := os.Open(tarLocation)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	err = cli.CopyToContainer(ctx, id, dockerLocation, reader, types.CopyToContainerOptions{})
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 }
 
@@ -77,11 +78,11 @@ func simpleRun(cli *client.Client, id string, cmd []string) types.IDResponse {
 	)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if err = cli.ContainerExecStart(ctx, execID.ID, types.ExecStartCheck{}); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if userInput.Debug {
@@ -98,12 +99,12 @@ func build(cli *client.Client) {
 
 	err := t.Archive([]string{"dockerfiles"}, "tarfiles/dockerfiles.tar")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	dockerBuildContext, err := os.Open("tarfiles/dockerfiles.tar")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	defer dockerBuildContext.Close()
 
@@ -115,17 +116,17 @@ func build(cli *client.Client) {
 	ibr, err := cli.ImageBuild(context.Background(), dockerBuildContext, opts)
 
 	if err != nil {
-		log.Fatalln("Error building image " + err.Error())
+		log.Fatal().Err(err).Msg("Error building image")
 	}
 	defer ibr.Body.Close()
 
 	response, err := ioutil.ReadAll(ibr.Body)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Fatal().Err(err).Msg("")
 	}
 	if userInput.Debug {
-		log.Printf("********* %s **********", ibr.OSType)
-		log.Println(string(response))
+		log.Debug().Msgf("********* %s **********", ibr.OSType)
+		log.Debug().Msg(string(response))
 	}
 }
 
@@ -161,7 +162,7 @@ func run(cli *client.Client) string {
 	}
 
 	if err = cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	return resp.ID
@@ -170,7 +171,7 @@ func run(cli *client.Client) string {
 func copyToDocker(cli *client.Client, id string) {
 	copyFiles(cli, id, []string{userInput.ChefClientKey, userInput.ChefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
 
-	moseutils.Info("Running knife ssl fetch, please wait...")
+	log.Info().Msg("Running knife ssl fetch, please wait...")
 	_ = simpleRun(cli, id, []string{"knife", "ssl", "fetch"})
 }
 
@@ -209,7 +210,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if userInput.Debug {
@@ -218,7 +219,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	hj, err := cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{Detach: false, Tty: true})
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	// Parse the hijacked reader for the agents
@@ -228,18 +229,16 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(hj.Reader)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	nodes := make([]string, 0)
-	if userInput.Debug {
-		// Print output from running mose in the workstation container
-		fmt.Println(buf.String())
-	}
+	// Print output from running mose in the workstation container
+	log.Debug().Msg(buf.String())
 	for _, match := range agentString.FindAllStringSubmatch(buf.String(), -1) {
 		for groupID, group := range match {
 			name := names[groupID]
 			if name != "" {
-				moseutils.Msg("The following nodes were identified: %v", group)
+				moseutils.ColorMsgf("The following nodes were identified: %v", group)
 				nodes = append(nodes, strings.Split(group, " ")...)
 			}
 		}
@@ -248,7 +247,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	hj.Close()
 
 	if len(nodes) < 1 {
-		log.Println("No nodes found, exiting...")
+		log.Log().Msg("No nodes found, exiting...")
 		signalChan <- os.Interrupt
 
 		os.Exit(0)
@@ -256,7 +255,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	// Run the MOSE binary on the new workstation that we just created
 	agents, err := TargetAgents(nodes, osTarget)
 	if err != nil {
-		log.Println("Quitting...")
+		log.Log().Msg("Quitting...")
 		signalChan <- os.Interrupt
 		os.Exit(1)
 	}
@@ -278,7 +277,7 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if userInput.Debug {
@@ -287,11 +286,11 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 	hj, err = cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{Detach: false, Tty: true})
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if _, err = io.Copy(os.Stdout, hj.Reader); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	hj.Close()
@@ -302,11 +301,11 @@ func removeContainer(cli *client.Client, id string) {
 	timeout, _ := time.ParseDuration("10s")
 	err := cli.ContainerStop(ctx, id, &timeout)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	err = cli.ContainerRemove(ctx, id, types.ContainerRemoveOptions{Force: true})
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 }
 
@@ -315,7 +314,7 @@ func monitor(cli *client.Client, id string) {
 	signal.Notify(signalChan, os.Interrupt)
 	go func(cli *client.Client, id string) {
 		<-signalChan
-		log.Println("\nReceived an interrupt, stopping services...")
+		log.Log().Msg("\nReceived an interrupt, stopping services...")
 		removeContainer(cli, id)
 		close(cleanupDone)
 	}(cli, id)
@@ -334,39 +333,39 @@ func generateKnife() {
 		TargetValidatorName: userInput.TargetValidatorName,
 	}
 
-	paramLoc := filepath.Join("templates", userInput.CMTarget)
-	box := packr.New("Params", "|")
-	box.ResolutionDir = paramLoc
+	s, err := pkger.Open("/cmd/chef/main/tmpl/knife.tmpl")
 	// Build knife.rb using the knife template
-	s, err := box.FindString("knife.tmpl")
-
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
+	defer s.Close()
 
-	t, err := template.New("knife").Parse(s)
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
+
+	t, err := template.New("knife").Parse(dat.String())
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	f, err := os.Create("dockerfiles/knife.rb")
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	err = t.Execute(f, knifeArgs)
 
 	if err != nil {
-		log.Fatal("Execute: ", err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	f.Close()
 }
 
 // SetupChefWorkstationContainer will configure and stand up a chef workstation container that MOSE can use
-func SetupChefWorkstationContainer(input moseutils.UserInput) {
+func SetupChefWorkstationContainer(input userinput.UserInput) {
 	userInput = input
 	signalChan = make(chan os.Signal, 1)
 	if userInput.Debug {
@@ -375,40 +374,30 @@ func SetupChefWorkstationContainer(input moseutils.UserInput) {
 	}
 
 	CreateUploadRoute(userInput)
-	moseutils.Info("Target organization name: %s", userInput.TargetOrgName)
+	log.Info().Msgf("Target organization name: %s", userInput.TargetOrgName)
 	generateKnife()
 	cli, err := client.NewClientWithOpts(client.WithVersion("1.37"))
 
 	if err != nil {
-		log.Fatalf("Could not get docker client: %v", err)
+		log.Fatal().Err(err).Msg("Could not get docker client")
 	}
-	if userInput.Debug {
-		log.Println("Building Workstation container, please wait...")
-	}
+	log.Debug().Msg("Building Workstation container, please wait...")
 
 	build(cli)
 
-	if userInput.Debug {
-		log.Println("Starting Workstation container, please wait...")
-	}
+	log.Debug().Msg("Starting Workstation container, please wait...")
 	id := run(cli)
 
 	go monitor(cli, id)
 
-	if userInput.Debug {
-		log.Println("Copying keys and relevant resources to workstation container, please wait...")
-	}
+	log.Debug().Msg("Copying keys and relevant resources to workstation container, please wait...")
 
 	copyToDocker(cli, id)
-	if userInput.Debug {
-		log.Println("Running MOSE in Workstation container, please wait...")
-	}
+	log.Debug().Msg("Running MOSE in Workstation container, please wait...")
 
 	runMoseInContainer(cli, id, userInput.OSTarget)
 
-	if userInput.Debug {
-		log.Println("Running MOSE in Workstation container, please wait...")
-	}
+	log.Debug().Msg("Running MOSE in Workstation container, please wait...")
 
 	removeContainer(cli, id)
 }

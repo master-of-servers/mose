@@ -32,38 +32,40 @@ make build
 ```
 ### Usage
 ```
-Usage of ./mose [options]:
-  -a string
-        Architecture that the target CM tool is running on (default "amd64")
-  -c string
-        Command to run on the targets
-  -d    Display debug output
-  -ep int
-        Port used to exfil data from chef server (default 443 with ssl, 9090 without) (default 443)
-  -f string
-        Output binary locally at <filepath>
-  -fu string
-        File upload option
-  -l string
-        Local IP Address
-  -m string
-        Name for backdoor payload (default "my_cmd")
-  -o string
-        Operating system that the target CM tool is on (default "linux")
-  -p int
-        Port used to serve payloads on (default 443 with ssl, 8090 without) (default 443)
-  -r string
-        Set the remote host for /etc/hosts in the chef workstation container (format is hostname:ip)
-  -rfp string
-        Remote file path to upload a script to (used in conjunction with -fu) (default "/root/.definitelynotevil")
-  -s string
-        JSON file to load for MOSE (default "settings.json")
-  -ssl
-        Serve payload over TLS
-  -t string
-        Configuration management tool to target (default "puppet")
-  -tts int
-        Number of seconds to serve the payload (default 60)
+MOSE is a post exploitation tool that enables security professionals with little or no experience with configuration management (CM) technologies to leverage them to compromise environments. CM tools, such as Puppet, Chef, Salt, and Ansible are used to provision systems in a uniform manner based on their function in a network. Upon successfully compromising a CM server, an attacker can use these tools to run commands on any and all systems that are in the CM server's inventory. However, if the attacker does not have experience with these types of tools, there can be a very time-consuming learning curve. MOSE allows an operator to specify what they want to run without having to get bogged down in the details of how to write code specific to a proprietary CM tool. It also automatically incorporates the desired commands into existing code on the system, removing that burden from the user. MOSE allows the operator to choose which assets they want to target within the scope of the server's inventory, whether this is a subset of clients or all clients. This is useful for targeting specific assets such as web servers or choosing to take over all of the systems in the CM server's inventory.
+
+Usage:
+  github.com/master-of-servers/mose [command]
+
+Available Commands:
+  ansible     Create MOSE payload for ansible takeover
+  chef        Create MOSE payload for chef takeover
+  help        Help about any command
+  puppet      Create MOSE payload for puppet takeover
+  salt        Create MOSE payload for salt takeover
+
+Flags:
+      --basedir string            Location of payloads output by mose (default "/home/lex/Documents/dev/mose")
+  -c, --cmd string                Command to run on the targets
+      --config string             config file (default is $PWD/.settings.yaml)
+      --debug                     Display debug output
+      --exfilport int             Port used to exfil data from chef server (default 443 with ssl, 9090 without) (default 443)
+  -f, --filepath string           Output binary locally at <filepath>
+  -u, --fileupload string         File upload option
+  -h, --help                      help for github.com/master-of-servers/mose
+  -l, --localip string            Local IP Address
+      --nocolor                   Disable colors for mose
+  -a, --osarch string             Architecture that the target CM tool is running on
+  -o, --ostarget string           Operating system that the target CM tool is on (default "linux")
+  -m, --payloadname string        Name for backdoor payload (default "my_cmd")
+      --payloads string           Location of payloads output by mose (default "/home/lex/Documents/dev/mose/payloads")
+      --remoteuploadpath string   Remote file path to upload a script to (used in conjunction with -fu) (default "/root/.definitelynotevil")
+  -r, --rhost string              Set the remote host for /etc/hosts in the chef workstation container (format is hostname:ip)
+      --ssl                       Serve payload over TLS
+      --tts int                   Number of seconds to serve the payload (default 60)
+      --websrvport int            Port used to serve payloads on (default 443 with ssl, 8090 without) (default 443)
+
+Use "github.com/master-of-servers/mose [command] --help" for more information about a command.
   ```
 
 ### TLS Certificates

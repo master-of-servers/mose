@@ -20,9 +20,9 @@ variables:
 
 steps:
 - script: |
-    wget "https://dl.google.com/go/go1.13.4.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.13.4.tar.gz"
-    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.13.4.tar.gz"
-  displayName: 'Install Go 1.13.4'
+    wget "https://golang.org/dl/go1.14.6.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.14.6.tar.gz"
+    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.14.6.tar.gz"
+  displayName: 'Install Go 1.14.6'
 
 - script: |
     mkdir -p '$(GOBIN)'
@@ -37,9 +37,8 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    go get -u github.com/gobuffalo/packr/v2/packr2
+    go get github.com/markbates/pkger/cmd/pkger
     export GO111MODULE=on
-    packr2 build
     go get
     go build
     mkdir -p payloads
@@ -49,7 +48,7 @@ steps:
 # Puppet
 - script: |
     export GO111MODULE=on
-    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
+    ./mose puppet -c "touch /tmp/test.txt && echo test >> /tmp/test.txt"  -f $(modulePath)/payloads/puppet-linux
   displayName: 'Generate a puppet payload'
   workingDirectory: "$(modulePath)"
 
@@ -81,7 +80,7 @@ steps:
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
-    ./mose -fu payloads/notevil.sh -t puppet -f payloads/puppet-linux
+    ./mose puppet -u payloads/notevil.sh  -f payloads/puppet-linux
   displayName: 'Generate a puppet payload to test file upload'
   workingDirectory: "$(modulePath)"
 
@@ -171,7 +170,7 @@ steps:
 # Ansible
 - script: |
     export GO111MODULE=on
-    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t ansible -f $(modulePath)/payloads/ansible-linux
+    ./mose ansible -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -f $(modulePath)/payloads/ansible-linux
   displayName: 'Generate an ansible payload'
   workingDirectory: "$(modulePath)"
 
@@ -219,7 +218,7 @@ steps:
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
-    ./mose -fu payloads/notevil.sh -t ansible -f payloads/ansible-linux
+    ./mose ansible -u payloads/notevil.sh -f payloads/ansible-linux
   displayName: 'Generate an ansible payload to test file upload'
   workingDirectory: "$(modulePath)"
 
@@ -237,7 +236,7 @@ steps:
     docker exec -i basic-control-node /bin/bash -c "ansible-playbook /root/.ansible/site.yml"
     
     # Ensure that MOSE is working properly by running cat on the file it created
-    docker exec -i basic-managed-node /bin/bash -c "cat /tmp/test.txt"
+    docker exec -i basic-managed-node /bin/bash -c "cat /tmp/file_upload_test.txt"
   displayName: 'Run MOSE generated file upload payload on the ansible test environment'
   workingDirectory: "$(modulePath)"
 # End Ansible
@@ -247,13 +246,61 @@ steps:
     git clone https://github.com/master-of-servers/salt-test-lab.git
     cd salt-test-lab && cd basic
     docker-compose up -d --build
-    sleep 60
-    # Fix pillar issue
+    sleep 60 # Fix pillar issue
     docker exec -it basic-salt-master /bin/bash -c "salt '*' saltutil.refresh_pillar"
     # Enroll minion with salt master
     docker exec -i basic-salt-master /bin/bash -c "salt '*' state.apply"
     docker exec -i basic-salt-master /bin/bash  -c "salt '*' pillar.items"
   displayName: 'Build and configure salt test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: |
+    export GO111MODULE=on
+    ./mose salt -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -f $(modulePath)/payloads/salt-linux
+  displayName: 'Generate an salt payload'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to salt master node
+    docker cp $(modulePath)/payloads/salt-linux basic-salt-master:/salt-linux
+    docker cp scripts/test_salt_cmd.exp basic-salt-master:/test_salt_cmd.exp
+    
+    docker exec -i basic-salt-master /bin/bash -c "apt-get update -y"
+    docker exec -i basic-salt-master /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata"
+    docker exec -i basic-salt-master /bin/bash -c "apt-get install -y expect"
+    docker exec -i basic-salt-master /bin/bash -c "expect /test_salt_cmd.exp"
+
+    # Run salt module to enact the changes made by MOSE
+    docker exec -i basic-salt-master /bin/bash -c "salt '*' state.apply"
+
+
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-salt-minion /bin/bash -c "cat /tmp/test.txt"
+  displayName: 'Run MOSE generated payload on the salt test environment'
+  workingDirectory: "$(modulePath)"
+
+- script: |
+    echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
+    export GO111MODULE=on
+    ./mose salt  -u $(modulePath)/payloads/notevil.sh -f $(modulePath)/payloads/salt-linux
+  displayName: 'Generate an salt payload'
+  workingDirectory: "$(modulePath)"
+
+- script: | 
+    # Copy MOSE payload to salt master node
+    docker cp $(modulePath)/payloads/salt-linux.tar basic-salt-master:/salt-linux.tar
+    docker cp scripts/test_salt_cmd.exp basic-salt-master:/test_salt_cmd.exp
+   
+    docker exec -i basic-salt-master /bin/bash -c "tar -xvf /salt-linux.tar"
+    docker exec -i basic-salt-master /bin/bash -c "expect /test_salt_cmd.exp"
+
+    # Run salt module to enact the changes made by MOSE
+    docker exec -i basic-salt-master /bin/bash -c "salt '*' state.apply"
+
+
+    # Ensure that MOSE is working properly by running cat on the file it created
+    docker exec -i basic-salt-minion /bin/bash -c "cat /tmp/file_upload_test.txt"
+  displayName: 'Run MOSE generated payload on the salt test environment'
   workingDirectory: "$(modulePath)"
 # End Salt
 

@@ -15,6 +15,7 @@ type Agent struct {
 	FileName             string
 	SSL                  bool
 	ExPort               int
+	SaltBackupLoc        string
 	RemoteUploadFilePath string
 	CleanupFile          string
 	PuppetBackupLoc      string

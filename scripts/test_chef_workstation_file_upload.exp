@@ -1,7 +1,7 @@
 #!/usr/bin/expect -f
 
-spawn ./mose -fu "$::env(PWD)/payloads/notevil.sh" -t chef -f "$::env(PWD)/payloads/chef-linux"
+spawn ./mose chef -u "$::env(PWD)/payloads/notevil.sh" -f "$::env(PWD)/payloads/chef-linux"
 
-expect "Is your target a chef workstation?\[Y/n/q\]"
+expect -re {.*Is your target a chef workstation\?\[Y/n/q\].*}
 send "Y\r"
 expect eof
