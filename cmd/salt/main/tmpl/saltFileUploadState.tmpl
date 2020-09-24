@@ -1,10 +1,10 @@
-"{{.Cmd}}":
+"{{.FileName}}":
   file.managed:
-    - name: /root/.notasevil
+    - name: {{.FilePath}}
     - source: salt://{{.StateName}}/files/{{.FileName}}
     - mode: 755
     - user: root
     - group: root
 
-"/root/.notasevil":
+"{{.FilePath}}":
  cmd.run

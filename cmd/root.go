@@ -5,18 +5,20 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/master-of-servers/mose/pkg/moseutils"
 	"github.com/master-of-servers/mose/pkg/system"
 	"github.com/master-of-servers/mose/pkg/userinput"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"path/filepath"
 )
 
 var (
-	cfgFile   string
+	cfgFile string
+	// UserInput contains the parameters specified by the user
 	UserInput userinput.UserInput
 )
 
@@ -38,10 +40,6 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/.settings.yaml)")
 
 	rootCmd.PersistentFlags().StringP("osarch", "a", "", "Architecture that the target CM tool is running on")
@@ -52,8 +50,8 @@ func init() {
 	rootCmd.PersistentFlags().StringP("fileupload", "u", "", "File upload option")
 	rootCmd.PersistentFlags().StringP("localip", "l", "", "Local IP Address")
 	rootCmd.PersistentFlags().StringP("payloadname", "m", "my_cmd", "Name for backdoor payload")
-	rootCmd.PersistentFlags().StringP("ostarget", "o", "linux", "Operating system that the target CM tool is on")
-	rootCmd.PersistentFlags().Int("websrvport", 443, "Port used to serve payloads on (default 443 with ssl, 8090 without)")
+	rootCmd.PersistentFlags().StringP("ostarget", "o", "linux", "Operating system that the target CM server is on")
+	rootCmd.PersistentFlags().Int("websrvport", 443, "Port used to serve payloads (default 443 with ssl, 8090 without)")
 	rootCmd.PersistentFlags().String("remoteuploadpath", "/root/.definitelynotevil", "Remote file path to upload a script to (used in conjunction with -fu)")
 	rootCmd.PersistentFlags().StringP("rhost", "r", "", "Set the remote host for /etc/hosts in the chef workstation container (format is hostname:ip)")
 	rootCmd.PersistentFlags().Bool("ssl", false, "Serve payload over TLS")
@@ -102,14 +100,12 @@ func initConfig() {
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("settings")
 	}
-	//log.Debug().Msg(viper.ConfigFileUsed())
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		log.Error().Err(err).Msg("Error reading in config file")
 	}
-	//log.Debug().Msgf("Using config file:", viper.ConfigFileUsed())
 
 	err := viper.Unmarshal(&UserInput)
 
@@ -119,6 +115,16 @@ func initConfig() {
 
 	if UserInput.Cmd != "" && UserInput.FileUpload != "" {
 		log.Fatal().Msg("You must specify a CM target, a command or file to upload, and an operating system.")
+	}
+
+	// Set port option for webserver
+	if UserInput.ServeSSL && UserInput.WebSrvPort == 8090 {
+		UserInput.WebSrvPort = 443
+	}
+
+	// Set port option for exfilling files from a Chef Server
+	if UserInput.ServeSSL && UserInput.ExfilPort == 9090 {
+		UserInput.ExfilPort = 443
 	}
 
 	if err != nil {

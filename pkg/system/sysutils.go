@@ -53,7 +53,7 @@ func GetUIDGid(file string) (int, int, error) {
 		GID := int(stat.Gid)
 		return UID, GID, nil
 	}
-	return -1, -1, errors.New("Unable to retrieve UID and GID of file")
+	return -1, -1, errors.New("unable to retrieve UID and GID of file")
 }
 
 // ChownR recursively change owner of directory

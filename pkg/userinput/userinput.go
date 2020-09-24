@@ -6,9 +6,6 @@ package userinput
 
 import (
 	"context"
-	"github.com/master-of-servers/mose/pkg/moseutils"
-	"github.com/master-of-servers/mose/pkg/netutils"
-	"github.com/master-of-servers/mose/pkg/system"
 	"io"
 	"os"
 	"os/exec"
@@ -18,11 +15,18 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/netutils"
+	"github.com/master-of-servers/mose/pkg/system"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/markbates/pkger"
 )
 
+// UserInput holds all values from command line arguments and the settings.json
+// This is a necessity resulting from templates needing to take values
+// from a single struct, and MOSE taking user input from multiple sources
 type UserInput struct {
 	// CLI
 	OSArch               string `mapstructure:"osarch,omitempty"`
@@ -64,6 +68,7 @@ type UserInput struct {
 	NoColor  bool   `mapstructure:"nocolor,omitempty"`
 }
 
+// StartTakeover kicks everything off for payload generation
 func (i *UserInput) StartTakeover() {
 	// Output to the payloads directory if -f is specified
 	if i.FileUpload != "" {
@@ -92,19 +97,15 @@ func (i *UserInput) StartTakeover() {
 	if i.FilePath == "" {
 		i.ServePayload()
 	}
-
 }
+
+// GenerateParams adds the specified input parameters into the payload
 func (i *UserInput) GenerateParams() {
 	var origFileUpload string
 
 	paramLoc := filepath.Join(i.BaseDir, "cmd/", i.CMTarget, "main/tmpl")
-	//paramLoc := filepath.Join(CMTarget, "tmpl")
-	//box := pkger.New("Params", "|")
-	//box.ResolutionDir = paramLoc
-	//pkger.Include("/cmd/mose")
 
 	// Generate the params for a given target
-	//s, err := box.FindString("params.tmpl")
 	s, err := pkger.Open(filepath.Join("/", paramLoc, "params.tmpl"))
 
 	if err != nil {
@@ -126,7 +127,6 @@ func (i *UserInput) GenerateParams() {
 	}
 
 	f, err := os.Create(filepath.Join(i.BaseDir, "/cmd/", i.CMTarget, "main/params.go"))
-	// f, err := os.Create(CMTarget + "/params.go")
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -175,15 +175,13 @@ func (i *UserInput) GenerateParams() {
 	}
 }
 
+// GeneratePayload creates the payload to run on the target system
 func (i *UserInput) GeneratePayload() {
 	if i.Cmd != "" {
 		log.Info().Msgf("Generating %s payload to run %s on a %s system, please wait...", i.CMTarget, i.Cmd, strings.ToLower(i.OSTarget))
 	} else {
 		log.Info().Msgf("Generating %s payload to run %s on a %s system, please wait...", i.CMTarget, filepath.Base(i.FileUpload), strings.ToLower(i.OSTarget))
 	}
-
-	//prevDir := utils.Gwd()
-	//moseutils.Cd(filepath.Clean(filepath.Join("cmd/github.com/master-of-servers/mose/", CMTarget)))
 
 	_ = os.Mkdir(i.PayloadDirectory, 0755)
 
@@ -215,13 +213,11 @@ func (i *UserInput) GeneratePayload() {
 
 	// FilePath used as tar output location in conjunction with FileUpload
 	if i.FilePath != "" && i.FileUpload != "" {
-		log.Info().Msgf("File Upload specified, copying file to payloads directory. FilePath supplied, tar file will be located at specified location")
+		log.Info().Msgf("FilePath supplied - the tar file will be created in %s.", i.FilePath)
+		log.Info().Msg("File Upload specified - copying payload into the payloads directory.")
 		system.CpFile(i.FileUpload, filepath.Join(i.PayloadDirectory, filepath.Base(i.FileUpload)))
 	}
 
-	//_, err := system.RunCommand("env", "GOOS="+strings.ToLower(i.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload, filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main.go"), filepath.Join(i.BaseDir, "cmd", i.CMTarget, "params.go"))
-	//commandString := fmt.Sprintf("GOOS=%s GOARCH=amd64 go build -o %s %s %s", strings.ToLower(i.OSTarget), payload, filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main.go"), filepath.Join(i.BaseDir, "cmd", i.CMTarget, "params.go"))
-	//_, err := utils.RunCommand("env", commandString)
 	cmd := exec.Command("pkger")
 	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main")
 	err := cmd.Run()
@@ -236,10 +232,9 @@ func (i *UserInput) GeneratePayload() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error running the command to generate the target payload")
 	}
-
-	//moseutils.Cd(prevDir)
 }
 
+// SetLocalIP sets the local IP address if specified as an input parameter (-l IPAddress)
 func (i *UserInput) SetLocalIP() {
 	if i.LocalIP == "" {
 		ip, err := netutils.GetLocalIP()
@@ -250,6 +245,7 @@ func (i *UserInput) SetLocalIP() {
 	}
 }
 
+// ServePayload will serve the payload with a web server
 func (i *UserInput) ServePayload() {
 	proto := "http"
 	if i.ServeSSL {
@@ -262,7 +258,6 @@ func (i *UserInput) ServePayload() {
 		moseutils.ColorMsgf("Payload being served at %s://%s:%d/%s-%s for %d seconds", proto, i.LocalIP, i.WebSrvPort, i.CMTarget, strings.ToLower(i.OSTarget), i.TimeToServe)
 	}
 
-	//srv := moseutils.StartServer(i.WebSrvPort, "payloads", i.ServeSSL, i.SSLCertPath, i.SSLKeyPath, time.Duration(i.TimeToServe)*time.Second, true)
 	srv := netutils.StartServer(i.WebSrvPort, i.PayloadDirectory, i.ServeSSL, i.SSLCertPath, i.SSLKeyPath, time.Duration(i.TimeToServe)*time.Second, true)
 
 	log.Info().Msg("Web server shutting down...")

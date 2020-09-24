@@ -8,13 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CMTARGETANSIBLE specifies the CM tool that we are targeting.
 var CMTARGETANSIBLE = "ansible"
 
 // ansibleCmd represents the ansible command
 var ansibleCmd = &cobra.Command{
 	Use:   "ansible",
-	Short: "Create MOSE payload for ansible takeover",
-	Long:  `Create MOSE payload for ansible takeover`,
+	Short: "Create MOSE payload for ansible",
+	Long:  `Create MOSE payload for ansible`,
 	Run: func(cmd *cobra.Command, args []string) {
 		UserInput.CMTarget = CMTARGETANSIBLE
 		UserInput.SetLocalIP()
@@ -26,14 +27,4 @@ var ansibleCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(ansibleCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// ansibleCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// ansibleCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

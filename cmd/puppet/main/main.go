@@ -229,7 +229,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 	moduleLoc := filepath.Join(puppetCodeLoc, "modules", moduleName)
 	moduleFolders := []string{filepath.Join(moduleLoc, "manifests")}
 	moduleManifest := filepath.Join(moduleLoc, "manifests", "init.pp")
-	if system.CreateFolders(moduleFolders) && generateModule(moduleManifest, cmd) {
+	if system.CreateDirectories(moduleFolders) && generateModule(moduleManifest, cmd) {
 		moseutils.ColorMsgf("Successfully created the %s module at %s", moduleName, moduleManifest)
 		moseutils.ColorMsgf("Adding folder %s to cleanup file", moduleFolders)
 		// Track the folders for clean up purposes
@@ -237,7 +237,7 @@ func createModule(manifestLoc string, moduleName string, cmd string) {
 		if uploadFileName != "" {
 			moduleFiles := filepath.Join(moduleLoc, "files")
 
-			system.CreateFolders([]string{moduleFiles})
+			system.CreateDirectories([]string{moduleFiles})
 			moseutils.ColorMsgf("Copying %s to module location %s", uploadFileName, moduleFiles)
 			_ = system.CpFile(uploadFileName, filepath.Join(moduleFiles, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(moduleFiles, filepath.Base(uploadFileName)), 0644); err != nil {
@@ -354,14 +354,6 @@ func doCleanup(manifestLocs []string) {
 func main() {
 	moseutils.NOCOLOR = noColor
 	moseutils.SetupLogger(debug)
-	//zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	//if debug {
-	//zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	//}
-	//log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	// If we're not root, we probably can't backdoor any of the puppet code, so exit
-	// This may not always be true as per https://puppet.com/blog/puppet-without-root-a-real-life-example
-	// But we are going with it as an assumption based on polling various DevOps engineers and Site Reliability engineers
 	system.CheckRoot()
 	manifestLocs := getExistingManifests()
 

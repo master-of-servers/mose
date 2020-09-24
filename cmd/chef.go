@@ -7,20 +7,22 @@ package cmd
 import (
 	"github.com/rs/zerolog/log"
 
+	"os"
+
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
-	"os"
 
 	"github.com/spf13/cobra"
 )
 
+// CMTARGETCHEF specifies the CM tool that we are targeting.
 const CMTARGETCHEF = "chef"
 
 // chefCmd represents the chef command
 var chefCmd = &cobra.Command{
 	Use:   "chef",
-	Short: "Create MOSE payload for chef takeover",
-	Long:  `Create MOSE payload for chef takeover`,
+	Short: "Create MOSE payload for chef",
+	Long:  `Create MOSE payload for chef`,
 	Run: func(cmd *cobra.Command, args []string) {
 		UserInput.CMTarget = CMTARGETCHEF
 		UserInput.SetLocalIP()
@@ -51,14 +53,4 @@ var chefCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(chefCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// chefCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// chefCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

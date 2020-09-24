@@ -6,6 +6,8 @@ expect -re {.*Do you want to create a backup of the top\.sls\? This can lead to 
 send "Y\r"
 
 expect {.*Do you want to target a specific environment and group?.*}
-send "n\r"
+send "Y\r"
 
+expect {.*Available environments and groups in top.sls.*}
+send "0\r"
 expect eof

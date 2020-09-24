@@ -11,25 +11,36 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 const (
+	// ColorBlack is black output.
 	ColorBlack = iota + 30
+	// ColorRed is red output.
 	ColorRed
+	// ColorGreen is green output.
 	ColorGreen
+	// ColorYellow is yellow output.
 	ColorYellow
+	// ColorBlue is blue output.
 	ColorBlue
+	// ColorMagenta is magenta output.
 	ColorMagenta
+	// ColorCyan is cyan output.
 	ColorCyan
+	// ColorWhite is white output.
 	ColorWhite
-
-	ColorBold     = 1
+	// ColorBold is bold output.
+	ColorBold = 1
+	// ColorDarkGray is gray output.
 	ColorDarkGray = 90
 )
 
+// NOCOLOR specifies if we do or do not want colorized output.
 var NOCOLOR bool
 
 // AskUserQuestion takes a question from a user and returns true or false based on the input.
@@ -39,7 +50,6 @@ var NOCOLOR bool
 func AskUserQuestion(question string, osTarget string) (bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		//log.Log().Msgf(question + "[Y/n/q]")
 		ColorMsgf(question + "[Y/n/q]")
 		text, _ := reader.ReadString('\n')
 		if strings.Contains(text, "Y") {
@@ -69,7 +79,6 @@ func IndexedUserQuestion(question string, osTarget string, validIndices map[int]
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		var err error
-		//log.Log().Msg(question)
 		ColorMsgf(question)
 		text, _ := reader.ReadString('\n')
 		if strings.Contains(text, "q") {
@@ -104,6 +113,7 @@ func IndexedUserQuestion(question string, osTarget string, validIndices map[int]
 	}
 }
 
+// ColorMsgf is used to color the output of an input message (s).
 func ColorMsgf(s string, i ...interface{}) {
 	if NOCOLOR {
 		if len(i) > 0 {
@@ -120,7 +130,7 @@ func ColorMsgf(s string, i ...interface{}) {
 	log.Log().Msg(fmt.Sprintf("\x1b[%dm%v\x1b[0m", ColorGreen, s))
 }
 
-// colorize returns the string s wrapped in ANSI code c, unless disabled is true.
+// Colorizer returns the string s wrapped in ANSI code c, unless disabled is true.
 func Colorizer(s interface{}, c int, disabled bool) string {
 	if disabled {
 		return fmt.Sprintf("%s", s)
@@ -128,12 +138,13 @@ func Colorizer(s interface{}, c int, disabled bool) string {
 	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }
 
+// SetupLogger configures zerolog and colorizes the output for different functionality.
 func SetupLogger(debug bool) {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-	output := zerolog.ConsoleWriter{Out: os.Stderr}
+	output := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}
 	output.FormatLevel = func(i interface{}) string {
 		var l string
 		if ll, ok := i.(string); ok {
@@ -163,7 +174,6 @@ func SetupLogger(debug bool) {
 			}
 		}
 		return l
-		//return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 	}
 	output.FormatMessage = func(i interface{}) string {
 		return fmt.Sprintf(": %s", i)

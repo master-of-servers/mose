@@ -7,15 +7,16 @@ package chefutils
 import (
 	"context"
 	"encoding/json"
-	"github.com/master-of-servers/mose/pkg/moseutils"
-	"github.com/master-of-servers/mose/pkg/netutils"
-	"github.com/master-of-servers/mose/pkg/system"
-	"github.com/master-of-servers/mose/pkg/userinput"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/netutils"
+	"github.com/master-of-servers/mose/pkg/system"
+	"github.com/master-of-servers/mose/pkg/userinput"
 
 	"github.com/rs/zerolog/log"
 )
@@ -128,7 +129,7 @@ func CreateUploadRoute(userInput userinput.UserInput) {
 		ip = userInput.LocalIP
 	}
 	if _, err := os.Stat("keys"); os.IsNotExist(err) {
-		system.CreateFolders([]string{"keys"})
+		system.CreateDirectories([]string{"keys"})
 	}
 
 	http.HandleFunc("/upload", fileUploader)

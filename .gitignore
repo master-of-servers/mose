@@ -18,7 +18,7 @@ chef-linux
 puppet-linux
 ansible-linux
 
-# pkged.go
+# Output from pkger
 pkged.go
 
 # Application-generated folders
