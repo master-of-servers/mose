@@ -53,14 +53,15 @@ steps:
 
 - script: |
     export GO111MODULE=on
-    echo 'q' | ./mose puppet -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --ssl
-    wget --no-check-certificate https://localhost:443/puppet-linux
-    echo 'q' | ./mose chef -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --websrvport 9999 --ssl
-    wget --no-check-certificate https://localhost:9999/chef-linux
-    echo 'q' | ./mose salt -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --websrvport 8888
-    wget http://localhost:8888/salt-linux
-    echo 'q' | ./mose ansible -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --websrvport 8090
-    wget http://localhost:8090/ansible-linux
+    echo 'q' | ./mose chef -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --websrvport 9999 --ssl &
+    wget --no-check-certificate --tries=10 --timeout=1 --retry-connrefused https://localhost:9999/chef-linux &
+    wait $!
+    echo 'q' | ./mose salt -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --websrvport 8888 & 
+    wget --no-check-certificate --tries=10 --timeout=1 --retry-connrefused http://localhost:8888/salt-linux &
+    wait $!
+    echo 'q' | ./mose ansible -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" --websrvport 8090 &
+    wget --no-check-certificate --tries=10 --timeout=1 --retry-connrefused http://localhost:8090/ansible-linux & 
+    wait $!
   displayName: 'Test download functionality'
   workingDirectory: "$(modulePath)"
 

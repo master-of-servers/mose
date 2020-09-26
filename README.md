@@ -48,11 +48,11 @@ Available Commands:
   salt        Create MOSE payload for salt
 
 Flags:
-      --basedir string            Location of payloads output by mose
+      --basedir string            Location of payloads output by mose (default "/Users/l/programs/go/src/github.com/master-of-servers/mose")
   -c, --cmd string                Command to run on the targets
       --config string             config file (default is $PWD/.settings.yaml)
       --debug                     Display debug output
-      --exfilport int             Port used to exfil data from chef server (default 443 with ssl, 9090 without) (default 443)
+      --exfilport int             Port used to exfil data from chef server (default 9090, 443 with SSL) (default 9090)
   -f, --filepath string           Output binary locally at <filepath>
   -u, --fileupload string         File upload option
   -h, --help                      help for github.com/master-of-servers/mose
@@ -61,12 +61,12 @@ Flags:
   -a, --osarch string             Architecture that the target CM tool is running on
   -o, --ostarget string           Operating system that the target CM server is on (default "linux")
   -m, --payloadname string        Name for backdoor payload (default "my_cmd")
-      --payloads string           Location of payloads output by mose
+      --payloads string           Location of payloads output by mose (default "/Users/l/programs/go/src/github.com/master-of-servers/mose/payloads")
       --remoteuploadpath string   Remote file path to upload a script to (used in conjunction with -fu) (default "/root/.definitelynotevil")
   -r, --rhost string              Set the remote host for /etc/hosts in the chef workstation container (format is hostname:ip)
       --ssl                       Serve payload over TLS
       --tts int                   Number of seconds to serve the payload (default 60)
-      --websrvport int            Port used to serve payloads (default 443 with ssl, 8090 without) (default 8090)
+      --websrvport int            Port used to serve payloads (default 8090, 443 with SSL) (default 8090)
 
 Use "github.com/master-of-servers/mose [command] --help" for more information about a command.
 ```

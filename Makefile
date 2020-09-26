@@ -5,8 +5,12 @@ build:
 	go build
 	mkdir -p payloads
 
-fmt: ## gofmt and goimports all go files
+fmt: 
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
+
+lint:
+	gometalinter --exclude=vendor --exclude=repos --disable-all --enable=golint --enable=vet --enable=gofmt ./...
+	find . -name '*.go' | xargs gofmt -w -s
 
 test:
 	go test -count=1 -v -race ./... ; \

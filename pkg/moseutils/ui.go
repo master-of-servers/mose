@@ -63,9 +63,8 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 			return false, errors.New("Quit")
 		} else if strings.Contains(text, "n") {
 			return false, nil
-		} else {
-			log.Error().Msg("Invalid input")
 		}
+		log.Error().Msg("Invalid input")
 	}
 }
 

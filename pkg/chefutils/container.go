@@ -333,6 +333,10 @@ func generateKnife() {
 	dat := new(strings.Builder)
 	_, err = io.Copy(dat, s)
 
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
 	t, err := template.New("knife").Parse(dat.String())
 
 	if err != nil {
