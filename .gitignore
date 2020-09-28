@@ -25,8 +25,5 @@ pkged.go
 payloads/
 keys/
 
-# Packr files and directories
-packrd/
-main-packr.go
-pkg/chefutils/chefutils-packr.go
+# Pkger files and directories
 params.go

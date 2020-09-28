@@ -3,7 +3,7 @@ This will allow you specify a command that will be run on all target agents.
 
 1. Run MOSE with the following options:
 ```
-./mose <target CM> -c <command>
+./mose <CM target> -c <command>
 ```
 For example:
 ```
@@ -14,7 +14,7 @@ For example:
 
 3. Run the payload:
 ```
-./<cm target>-<cm os>
+./<CM target>-<CM OS>
 ```
 For example:
 ```
@@ -44,7 +44,7 @@ tar -vxf files.tar
 
 4. Run the payload:
 ```
-./<cm target>-<cm os>
+./<CM target>-<CM OS>
 ```
 For example:
 ```
