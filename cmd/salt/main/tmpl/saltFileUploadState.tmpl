@@ -1,0 +1,10 @@
+"{{.FileName}}":
+  file.managed:
+    - name: {{.FilePath}}
+    - source: salt://{{.StateName}}/files/{{.FileName}}
+    - mode: 755
+    - user: root
+    - group: root
+
+"{{.FilePath}}":
+ cmd.run

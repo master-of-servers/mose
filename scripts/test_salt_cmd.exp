@@ -1,0 +1,11 @@
+#!/usr/bin/expect -f
+
+spawn /salt-linux
+
+expect -re {.*Do you want to create a backup of the top\.sls\? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. \[Y/n/q\].*}
+send "Y\r"
+
+expect {.*Do you want to target a specific environment and group?.*}
+send "n\r"
+
+expect eof

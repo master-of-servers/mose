@@ -7,7 +7,6 @@ package chefutils
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -20,12 +19,14 @@ func TargetAgents(nodes []string, osTarget string) ([]string, error) {
 	if ans, err := moseutils.AskUserQuestion("Do you want to target specific chef agents? ", osTarget); ans && err == nil {
 		reader := bufio.NewReader(os.Stdin)
 		// Print the first discovered node (done for formatting purposes)
-		fmt.Printf("%s", nodes[0])
+		moseutils.ColorMsgf("%s", nodes[0])
 		// Print the rest of the discovered nodes
 		for _, node := range nodes[1:] {
-			fmt.Printf(",%s", node)
+			if node != "" {
+				moseutils.ColorMsgf("%s", node)
+			}
 		}
-		fmt.Println("\nPlease input the chef agents that you want to target using commas to separate them: ")
+		moseutils.ColorMsgf("\nPlease input the chef agents that you want to target using commas to separate them: ")
 		text, _ := reader.ReadString('\n')
 		targets = strings.Split(strings.TrimSuffix(text, "\n"), ",")
 	} else if !ans && err == nil {
