@@ -10,7 +10,7 @@ schedules:
   always: true
 
 pool:
-  vmImage: 'ubuntu-16.04'
+  vmImage: 'ubuntu-20.04'
 
 variables:
   GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
