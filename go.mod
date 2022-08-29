@@ -20,7 +20,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
-	github.com/rs/zerolog v1.25.0
+	github.com/rs/zerolog v1.28.0
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.9.0
