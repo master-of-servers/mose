@@ -37,8 +37,8 @@ jobs:
           GO111MODULE: on
           GOBIN: ${{ github.workspace }}/bin
         run: |
-          go get github.com/markbates/pkger/cmd/pkger
-          go get -u -v
+          go install github.com/markbates/pkger/cmd/pkger@v0.17.1
+          go mod download
           go build
           mkdir -p payloads
 
