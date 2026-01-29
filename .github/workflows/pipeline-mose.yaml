@@ -4,26 +4,34 @@ name: MOSE Build and Test
 on:
   push:
     branches:
-      - master
+      - main
   schedule:
     - cron: "0 0 * * 0"
   workflow_dispatch:
 
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 permissions:
   contents: read
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  GO_VERSION: 1.25.6
 
 jobs:
   build-test:
     runs-on: ubuntu-24.04
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
         with:
-          go-version-file: go.mod
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
 
       - name: Add GOBIN to PATH
         env:
@@ -37,8 +45,8 @@ jobs:
           GO111MODULE: on
           GOBIN: ${{ github.workspace }}/bin
         run: |
-          go get github.com/markbates/pkger/cmd/pkger
-          go get -u -v
+          go install github.com/markbates/pkger/cmd/pkger@v0.17.1
+          go mod download
           go build
           mkdir -p payloads
 

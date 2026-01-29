@@ -1,0 +1,141 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  BINARY_NAME: mose
+  CMD_PATH: ./cmd/mose
+
+includes:
+  go:
+    taskfile: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/go/Taskfile.yaml"
+    vars:
+      BINARY_NAME: mose
+      CMD_PATH: ./cmd/mose
+  docker:
+    taskfile: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/docker/Taskfile.yaml"
+  github:
+    taskfile: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/github/Taskfile.yaml"
+  pre-commit:
+    taskfile: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/pre-commit/Taskfile.yaml"
+  secrets:
+    taskfile: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/secrets/Taskfile.yaml"
+  renovate:
+    taskfile: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/renovate/Taskfile.yaml"
+
+tasks:
+  default:
+    desc: Build, test, and clean
+    cmds:
+      - task: go:default
+
+  schema:generate:
+    desc: Placeholder schema generator (mose does not ship a JSON schema yet)
+    cmds:
+      - echo "No schema generator configured for mose."
+
+  schema:validate:
+    desc: Placeholder schema validation (mose does not ship a JSON schema yet)
+    cmds:
+      - echo "No schema validation configured for mose."
+
+  images:discover:
+    desc: Discover all container images with docker-bake.hcl files
+    silent: true
+    cmds:
+      - |
+        echo "Discovering container images..."
+        find dockerfiles -mindepth 1 -maxdepth 1 -type d -exec test -f {}/docker-bake.hcl \; -exec basename {} \;
+
+  images:build:
+    desc: "Build a specific container image (usage: task images:build IMAGE=mose)"
+    vars:
+      IMAGE: '{{.IMAGE | default ""}}'
+      PLATFORMS: '{{.PLATFORMS | default "linux/amd64,linux/arm64"}}'
+      PUSH: '{{.PUSH | default "false"}}'
+    preconditions:
+      - sh: test -n "{{.IMAGE}}"
+        msg: "IMAGE variable is required. Usage - task images:build IMAGE=mose"
+      - sh: test -f "dockerfiles/{{.IMAGE}}/docker-bake.hcl"
+        msg: "docker-bake.hcl not found for image {{.IMAGE}}"
+    cmds:
+      - |
+        echo "Building container image: {{.IMAGE}}"
+        echo "Platforms: {{.PLATFORMS}}"
+        echo "Push: {{.PUSH}}"
+
+        # Ensure buildx builder exists and is active
+        docker buildx inspect multiarch-builder 2>/dev/null || \
+          docker buildx create --name multiarch-builder --bootstrap --use --driver docker-container
+        docker buildx use multiarch-builder
+
+        # Build using docker bake
+        if [ "{{.PUSH}}" = "true" ]; then
+          # Push to registry
+          docker buildx bake \
+            --file ./dockerfiles/{{.IMAGE}}/docker-bake.hcl \
+            --set "*.platform={{.PLATFORMS}}" \
+            --set "*.output=type=registry,push=true" \
+            multi
+        else
+          # Build locally without push (multi-platform images stay in build cache)
+          docker buildx bake \
+            --file ./dockerfiles/{{.IMAGE}}/docker-bake.hcl \
+            --set "*.platform={{.PLATFORMS}}" \
+            --set "*.output=type=image,push=false" \
+            multi
+        fi
+
+  images:build-all:
+    desc: "Build all container images (use PUSH=true to push to registry)"
+    vars:
+      PLATFORMS: '{{.PLATFORMS | default "linux/amd64,linux/arm64"}}'
+      PUSH: '{{.PUSH | default "false"}}'
+    cmds:
+      - |
+        echo "Discovering and building all container images..."
+        echo "Platforms: {{.PLATFORMS}}"
+        echo "Push: {{.PUSH}}"
+        echo ""
+
+        IMAGES=$(find dockerfiles -mindepth 1 -maxdepth 1 -type d -exec test -f {}/docker-bake.hcl \; -exec basename {} \;)
+
+        for image in $IMAGES; do
+          echo "========================================="
+          echo "Building: $image"
+          echo "========================================="
+          task images:build IMAGE=$image PLATFORMS={{.PLATFORMS}} PUSH={{.PUSH}}
+          echo ""
+        done
+
+        echo "✅ All images built successfully!"
+
+  images:load:
+    desc: "Build and load a container image locally (single platform)"
+    vars:
+      IMAGE: '{{.IMAGE | default ""}}'
+      PLATFORM: '{{.PLATFORM | default "linux/amd64"}}'
+    preconditions:
+      - sh: test -n "{{.IMAGE}}"
+        msg: "IMAGE variable is required. Usage - task images:load IMAGE=mose"
+      - sh: test -f "dockerfiles/{{.IMAGE}}/docker-bake.hcl"
+        msg: "docker-bake.hcl not found for image: {{.IMAGE}}"
+    cmds:
+      - |
+        echo "Building and loading container image: {{.IMAGE}}"
+        echo "Platform: {{.PLATFORM}}"
+
+        # Determine which target to use based on platform
+        if echo "{{.PLATFORM}}" | grep -q "arm64"; then
+          TARGET="arm64"
+        else
+          TARGET="amd64"
+        fi
+
+        echo "Target: $TARGET"
+
+        docker buildx bake \
+          --file ./dockerfiles/{{.IMAGE}}/docker-bake.hcl \
+          --set "${TARGET}.tags={{.IMAGE}}:latest" \
+          --load \
+          ${TARGET}
