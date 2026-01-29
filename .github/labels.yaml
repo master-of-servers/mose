@@ -1,0 +1,70 @@
+---
+# Area
+- name: area/go
+  color: "00ADD8" # go blue
+  description: >-
+    Changes made to Go source code (cmd/, pkg/)
+
+- name: area/schema
+  color: "FFD700" # gold
+  description: >-
+    Changes made to JSON schema files
+
+- name: area/scripts
+  color: "90EE90" # light green
+  description: >-
+    Changes made to build and utility scripts
+
+- name: area/docs
+  color: "8fbc8f" # light green
+  description: >-
+    Changes made to project documentation
+
+- name: area/github
+  color: "72ccf3" # light blue
+  description: >-
+    Changes made to GitHub Actions workflows
+
+- name: area/taskfile
+  color: "7BD7E0" # cyan
+  description: >-
+    Changes made to Taskfile configurations
+
+- name: area/pre-commit
+  color: "BC9BE3" # lavender
+  description: >-
+    Changes made to pre-commit hooks
+
+# Renovate
+- name: renovate/container
+  color: "ffc300"
+- name: renovate/github-action
+  color: "ffc300"
+- name: renovate/github-release
+  color: "ffc300"
+
+# Semantic Type
+- name: type/digest
+  color: "FFEC19"
+- name: type/patch
+  color: "FFEC19"
+- name: type/minor
+  color: "FF9800"
+- name: type/major
+  color: "F6412D"
+- name: type/break
+  color: "F6412D"
+
+# Uncategorized
+- name: bug
+  color: "ee0701"
+- name: do-not-merge
+  color: "ee0701"
+- name: docs
+  color: "F4D1B7"
+- name: enhancement
+  color: "84b6eb"
+- name: question
+  description: >-
+    Clarification and/or additional information required to move forward
+  color: "cc317c"

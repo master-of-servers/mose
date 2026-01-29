@@ -1,0 +1,110 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    ':disableRateLimiting',
+    ':dependencyDashboard',
+    ':semanticCommits',
+    ':enablePreCommit',
+    ':automergeDigest',
+    ':automergeBranch',
+    'helpers:pinGitHubActionDigests',
+  ],
+  dependencyDashboardLabels: [
+    'renovate-dashboard',
+  ],
+  dependencyDashboardTitle: 'Renovate Dashboard 🤖',
+  suppressNotifications: [
+    'prIgnoreNotification',
+  ],
+  rebaseWhen: 'conflicted',
+  commitBodyTable: true,
+  labels: [
+    'renovate',
+  ],
+  platformAutomerge: true,
+  postUpdateOptions: [
+    'gomodTidy',
+  ],
+  'pre-commit': {
+    enabled: true,
+  },
+  'github-actions': {
+    enabled: true,
+  },
+  gomod: {
+    enabled: true,
+  },
+  packageRules: [
+    {
+      matchCategories: [
+        'golang',
+      ],
+      enabled: true,
+    },
+    {
+      description: 'Auto merge GitHub Actions updates',
+      matchManagers: [
+        'github-actions',
+      ],
+      matchDatasources: [
+        'github-tags',
+      ],
+      matchUpdateTypes: [
+        'major',
+        'minor',
+        'patch',
+      ],
+      automerge: true,
+      automergeType: 'branch',
+    },
+    {
+      description: 'Auto merge Go dependency updates',
+      matchManagers: [
+        'gomod',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'digest',
+      ],
+      automerge: true,
+      automergeType: 'pr',
+      automergeStrategy: 'merge-queue',
+    },
+    {
+      description: 'Group Go indirect dependencies (non-major)',
+      matchManagers: [
+        'gomod',
+      ],
+      matchDepTypes: [
+        'indirect',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'digest',
+      ],
+      groupName: 'go indirect dependencies',
+    },
+  ],
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+  },
+  customManagers: [
+    {
+      customType: 'regex',
+      description: 'Update GO_VERSION environment variable in workflows',
+      managerFilePatterns: [
+        '/^\\.github/workflows/[^/]+\\.ya?ml$/',
+      ],
+      matchStrings: [
+        'GO_VERSION:\\s*(?<currentValue>\\S+)',
+      ],
+      depNameTemplate: 'golang',
+      datasourceTemplate: 'golang-version',
+      versioningTemplate: 'loose',
+    },
+  ],
+}
