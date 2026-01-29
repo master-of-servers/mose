@@ -9,7 +9,7 @@ import (
 )
 
 // CMTARGETANSIBLE specifies the CM tool that we are targeting.
-var CMTARGETANSIBLE = "ansible"
+const CMTARGETANSIBLE = "ansible"
 
 // ansibleCmd represents the ansible command
 var ansibleCmd = &cobra.Command{

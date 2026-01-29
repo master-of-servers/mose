@@ -62,24 +62,29 @@ func init() {
 	rootCmd.PersistentFlags().String("payloads", filepath.Join(path, "payloads"), "Location of payloads output by mose")
 	rootCmd.PersistentFlags().String("basedir", path, "Location of payloads output by mose")
 
-	viper.BindPFlag("osarch", rootCmd.PersistentFlags().Lookup("osarch"))
-	viper.BindPFlag("cmd", rootCmd.PersistentFlags().Lookup("cmd"))
-	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
-	viper.BindPFlag("exfilport", rootCmd.PersistentFlags().Lookup("exfilport"))
-	viper.BindPFlag("filepath", rootCmd.PersistentFlags().Lookup("filepath"))
-	viper.BindPFlag("fileupload", rootCmd.PersistentFlags().Lookup("fileupload"))
-	viper.BindPFlag("localip", rootCmd.PersistentFlags().Lookup("localip"))
-	viper.BindPFlag("payloadname", rootCmd.PersistentFlags().Lookup("payloadname"))
-	viper.BindPFlag("ostarget", rootCmd.PersistentFlags().Lookup("ostarget"))
-	viper.BindPFlag("websrvport", rootCmd.PersistentFlags().Lookup("websrvport"))
-	viper.BindPFlag("remoteuploadpath", rootCmd.PersistentFlags().Lookup("remoteuploadpath"))
-	viper.BindPFlag("rhost", rootCmd.PersistentFlags().Lookup("rhost"))
-	viper.BindPFlag("ssl", rootCmd.PersistentFlags().Lookup("ssl"))
-	viper.BindPFlag("tts", rootCmd.PersistentFlags().Lookup("tts"))
-	viper.BindPFlag("nocolor", rootCmd.PersistentFlags().Lookup("nocolor"))
+	bindFlag := func(key string, name string) {
+		if err := viper.BindPFlag(key, rootCmd.PersistentFlags().Lookup(name)); err != nil {
+			log.Fatal().Err(err).Msgf("Error binding flag %s", name)
+		}
+	}
 
-	viper.BindPFlag("payloads", rootCmd.PersistentFlags().Lookup("payloads"))
-	viper.BindPFlag("basedir", rootCmd.PersistentFlags().Lookup("basedir"))
+	bindFlag("osarch", "osarch")
+	bindFlag("cmd", "cmd")
+	bindFlag("debug", "debug")
+	bindFlag("exfilport", "exfilport")
+	bindFlag("filepath", "filepath")
+	bindFlag("fileupload", "fileupload")
+	bindFlag("localip", "localip")
+	bindFlag("payloadname", "payloadname")
+	bindFlag("ostarget", "ostarget")
+	bindFlag("websrvport", "websrvport")
+	bindFlag("remoteuploadpath", "remoteuploadpath")
+	bindFlag("rhost", "rhost")
+	bindFlag("ssl", "ssl")
+	bindFlag("tts", "tts")
+	bindFlag("nocolor", "nocolor")
+	bindFlag("payloads", "payloads")
+	bindFlag("basedir", "basedir")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -107,7 +112,9 @@ func initConfig() {
 		log.Error().Err(err).Msg("Error reading in config file")
 	}
 
-	err := viper.Unmarshal(&UserInput)
+	if err := viper.Unmarshal(&UserInput); err != nil {
+		log.Error().Err(err).Msg("Error unmarshalling config file")
+	}
 
 	if UserInput.Cmd == "" && UserInput.FileUpload == "" {
 		log.Fatal().Msg("You must specify a CM target and a command or file to upload.")
@@ -125,10 +132,6 @@ func initConfig() {
 	// Set port option for exfilling files from a Chef Server
 	if UserInput.ServeSSL && UserInput.ExfilPort == 9090 {
 		UserInput.ExfilPort = 443
-	}
-
-	if err != nil {
-		log.Error().Err(err).Msg("Error unmarshalling config file")
 	}
 	moseutils.NOCOLOR = UserInput.NoColor
 	moseutils.SetupLogger(UserInput.Debug)

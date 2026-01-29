@@ -16,18 +16,16 @@ import (
 // TargetAgents allows a user to select specific chef agents, or return them all as a []string
 func TargetAgents(nodes []string, osTarget string) ([]string, error) {
 	var targets []string
-	if ans, err := moseutils.AskUserQuestion("Do you want to target specific chef agents? ", osTarget); ans && err == nil {
+	if answer, err := moseutils.AskUserQuestion("Do you want to target specific chef agents? ", osTarget); answer && err == nil {
 		reader := bufio.NewReader(os.Stdin)
 		// Print the first discovered node (done for formatting purposes)
 		// Print the rest of the discovered nodes
-		validAgents := make(map[string]bool)
+		validAgents := make(map[string]struct{})
 		printNodes := func() {
 			for _, node := range nodes {
 				if node != "" {
 					moseutils.ColorMsgf("%s", node)
-					if !validAgents[node] {
-						validAgents[node] = true
-					}
+					validAgents[node] = struct{}{}
 				}
 			}
 		}
@@ -38,7 +36,8 @@ func TargetAgents(nodes []string, osTarget string) ([]string, error) {
 			text, _ := reader.ReadString('\n')
 			targets = strings.Split(strings.TrimSuffix(text, "\n"), ",")
 			for ind, uTarget := range targets {
-				switch found := validAgents[uTarget]; found {
+				uTarget = strings.TrimSpace(uTarget)
+				switch _, found := validAgents[uTarget]; found {
 				case true:
 					if ind == len(targets)-1 {
 						break Validated
@@ -48,11 +47,11 @@ func TargetAgents(nodes []string, osTarget string) ([]string, error) {
 				}
 			}
 		}
-	} else if !ans && err == nil {
+	} else if !answer && err == nil {
 		// Target all of the agents
 		return []string{"MOSEALL"}, nil
 	} else if err != nil {
-		return nil, errors.New("Quit")
+		return nil, errors.New("quit")
 	}
 	return targets, nil
 }

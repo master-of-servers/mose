@@ -1,11 +1,11 @@
 build:
 	export GO111MODULE=on
-	go get github.com/markbates/pkger/cmd/pkger
-	go get -u -v
+	go install github.com/markbates/pkger/cmd/pkger@v0.17.1
+	go mod download
 	go build
 	mkdir -p payloads
 
-fmt: 
+fmt:
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
 
 lint:

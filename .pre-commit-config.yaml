@@ -10,6 +10,7 @@ repos:
       - id: trailing-whitespace
       - id: check-added-large-files
       - id: detect-private-key
+        exclude: ^data/mose\.key$
       - id: check-shebang-scripts-are-executable
 
   - repo: https://github.com/adrienverge/yamllint.git

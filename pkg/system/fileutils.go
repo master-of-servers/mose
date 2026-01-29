@@ -5,17 +5,19 @@
 package system
 
 import (
+	"archive/tar"
+	"archive/zip"
 	"bufio"
+	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/master-of-servers/mose/pkg/moseutils"
-	"github.com/mholt/archiver"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,19 +39,17 @@ func CreateDirectories(folders []string) bool {
 // FileExists returns true if a file input (fileLoc) exists on the filesystem
 // Otherwise it returns false
 func FileExists(fileLoc string) bool {
-	if _, err := os.Stat(fileLoc); err == nil {
-		return true
-	}
-	return false
+	_, err := os.Stat(fileLoc)
+	return err == nil
 }
 
 // GrepFile looks for patterns in a file (filePath) using an input regex (regex)
 // It will return any matches that are found in the file in a slice
 func GrepFile(filePath string, regex *regexp.Regexp) []string {
-	file, err := ioutil.ReadFile(filePath)
+	file, err := os.ReadFile(filePath)
 
 	if err != nil {
-		log.Error().Msgf("Unable to read file %v", filePath)
+		log.Error().Err(err).Msgf("Unable to read file %v", filePath)
 	}
 	contents := string(file)
 	matches := regex.FindAllString(contents, -1)
@@ -92,7 +92,7 @@ func File2lines(filePath string) ([]string, error) {
 
 // ReadBytesFromFile returns all data from the input file (filePath) as a byte array
 func ReadBytesFromFile(filePath string) ([]byte, error) {
-	b, err := ioutil.ReadFile(filePath)
+	b, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +102,8 @@ func ReadBytesFromFile(filePath string) ([]byte, error) {
 // WriteBytesToFile writes a byte array to the file specified with filePath with the permissions specified in perm
 // An error will be returned if there is one
 func WriteBytesToFile(filePath string, data []byte, perm os.FileMode) error {
-	err := ioutil.WriteFile(filePath, data, 0644)
-	if err != nil {
-		return err
+	if err := os.WriteFile(filePath, data, perm); err != nil {
+		return fmt.Errorf("write file %s: %w", filePath, err)
 	}
 	return nil
 }
@@ -117,16 +116,16 @@ func InsertStringToFile(path, str string, index int) error {
 		return err
 	}
 
-	fileContent := ""
+	var builder strings.Builder
 	for i, line := range lines {
 		if i == index {
-			fileContent += str
+			builder.WriteString(str)
 		}
-		fileContent += line
-		fileContent += "\n"
+		builder.WriteString(line)
+		builder.WriteString("\n")
 	}
 
-	return ioutil.WriteFile(path, []byte(fileContent), 0644)
+	return os.WriteFile(path, []byte(builder.String()), 0644)
 }
 
 // LinesFromReader will return the lines read from a reader
@@ -145,31 +144,194 @@ func LinesFromReader(r io.Reader) ([]string, error) {
 }
 
 // ArchiveFiles will create an archive file at a specific location (archiveLocation) with the files specified (files)
-// currently only supports tar and zip based archives. Rar can handle unpacking only and gz does not handle files
+// currently only supports tar, tar.gz, tgz, and zip based archives.
 func ArchiveFiles(files []string, archiveLocation string) (string, error) {
-	ext, err := archiver.ByExtension(filepath.Base(archiveLocation))
-	if err != nil {
-		return "", err
-	}
 	if _, err := os.Stat(archiveLocation); !os.IsNotExist(err) {
 		_ = os.Remove(archiveLocation)
 	}
 
-	arc, ok := ext.(archiver.Archiver)
-	if !ok {
-		return "", errors.New("the following archive types are not supported: tar.gz, tar, tar.xz, zip")
-	}
-	if err := arc.Archive(files, archiveLocation); err != nil {
-		return "", err
+	lowerPath := strings.ToLower(archiveLocation)
+	switch {
+	case strings.HasSuffix(lowerPath, ".tar.gz") || strings.HasSuffix(lowerPath, ".tgz"):
+		if err := archiveTar(files, archiveLocation, true); err != nil {
+			return "", err
+		}
+	case strings.HasSuffix(lowerPath, ".tar"):
+		if err := archiveTar(files, archiveLocation, false); err != nil {
+			return "", err
+		}
+	case strings.HasSuffix(lowerPath, ".zip"):
+		if err := archiveZip(files, archiveLocation); err != nil {
+			return "", err
+		}
+	default:
+		return "", errors.New("the following archive types are not supported: tar.gz, tgz, tar, zip")
 	}
 	return archiveLocation, nil
+}
+
+func archiveTar(files []string, archiveLocation string, gzipEnabled bool) error {
+	outFile, err := os.Create(archiveLocation)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = outFile.Close()
+	}()
+
+	var writer io.WriteCloser = outFile
+	var gw *gzip.Writer
+	if gzipEnabled {
+		gw = gzip.NewWriter(outFile)
+		writer = gw
+	}
+
+	tw := tar.NewWriter(writer)
+
+	for _, root := range files {
+		if err := addPathToTar(tw, root); err != nil {
+			return err
+		}
+	}
+	if err := tw.Close(); err != nil {
+		return err
+	}
+	if gw != nil {
+		if err := gw.Close(); err != nil {
+			return err
+		}
+	}
+	if err := outFile.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func addPathToTar(tw *tar.Writer, root string) error {
+	baseDir := filepath.Dir(root)
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(baseDir, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		if strings.HasPrefix(rel, "..") || strings.HasPrefix(rel, "/") || rel == "." {
+			return fmt.Errorf("invalid archive path: %s", rel)
+		}
+
+		link := ""
+		if info.Mode()&os.ModeSymlink != 0 {
+			link, err = os.Readlink(path)
+			if err != nil {
+				return err
+			}
+		}
+
+		header, err := tar.FileInfoHeader(info, link)
+		if err != nil {
+			return err
+		}
+		header.Name = rel
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(tw, file); err != nil {
+				_ = file.Close()
+				return err
+			}
+			if err := file.Close(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func archiveZip(files []string, archiveLocation string) error {
+	outFile, err := os.Create(archiveLocation)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = outFile.Close()
+	}()
+
+	zw := zip.NewWriter(outFile)
+
+	for _, root := range files {
+		if err := addPathToZip(zw, root); err != nil {
+			return err
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return err
+	}
+	if err := outFile.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func addPathToZip(zw *zip.Writer, root string) error {
+	baseDir := filepath.Dir(root)
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(baseDir, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		if strings.HasPrefix(rel, "..") || strings.HasPrefix(rel, "/") || rel == "." {
+			return fmt.Errorf("invalid archive path: %s", rel)
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		header.Name = rel
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Deflate
+		}
+
+		writer, err := zw.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(writer, file); err != nil {
+				_ = file.Close()
+				return err
+			}
+			if err := file.Close(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // ReplLineInFile will replace a line in a file (filePath) with the specified replStr and delimiter (delim)
 // It will return true with the path to the file if successful
 // Otherwise it will return false and an empty string
 func ReplLineInFile(filePath string, delim string, replStr string) (bool, string) {
-	input, err := ioutil.ReadFile(filePath)
+	input, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 		return false, ""
@@ -183,7 +345,7 @@ func ReplLineInFile(filePath string, delim string, replStr string) (bool, string
 		}
 	}
 	output := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(filePath, []byte(output), 0644)
+	err = os.WriteFile(filePath, []byte(output), 0644)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 		return false, ""
@@ -198,44 +360,12 @@ func ReplLineInFile(filePath string, delim string, replStr string) (bool, string
 // dirNames - directory names to search for (optional)
 // Returns files found that meet the input criteria
 func FindFiles(locations []string, extensionList []string, fileNames []string, dirNames []string) ([]string, []string) {
-	var foundFiles = make(map[string]int)
-	var foundDirs = make(map[string]int)
+	foundFiles := make(map[string]struct{})
+	foundDirs := make(map[string]struct{})
 	fileList, dirList := GetFileAndDirList(locations)
-	// iterate through filenames if they are provided
-	for _, fileContains := range fileNames {
-		for _, file := range fileList {
-			if strings.Contains(file, fileContains) {
-				if _, exist := foundFiles[file]; !exist {
-					foundFiles[file] = 1
-				}
-			}
-		}
-	}
-	// iterate through the extensionList (if it's provided)s
-	for _, ext := range extensionList {
-		for _, file := range fileList {
-			if strings.HasSuffix(file, ext) {
-				if _, exist := foundFiles[file]; !exist {
-					foundFiles[file] = 1
-				}
-			}
-		}
-	}
-	// iterate through dirNames (if they're provided)
-	for _, reg := range dirNames {
-		for _, dir := range dirList {
-			m, err := regexp.MatchString(reg, dir)
-			if err != nil {
-				log.Fatal().Err(err).Msgf("Unable to locate the %s directory", dir)
-			} else {
-				if m {
-					if _, exist := foundDirs[dir]; !exist {
-						foundDirs[dir] = 1
-					}
-				}
-			}
-		}
-	}
+	collectFilesByName(fileList, fileNames, foundFiles)
+	collectFilesByExtension(fileList, extensionList, foundFiles)
+	collectDirsByPattern(dirList, dirNames, foundDirs)
 
 	if len(foundDirs) == 0 && len(dirNames) > 0 {
 		log.Info().Msgf("No dirs found with these names: %v", dirNames)
@@ -256,20 +386,47 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 	return foundFileKeys, foundDirsKeys
 }
 
+func collectFilesByName(fileList []string, fileNames []string, foundFiles map[string]struct{}) {
+	for _, fileContains := range fileNames {
+		for _, file := range fileList {
+			if strings.Contains(file, fileContains) {
+				foundFiles[file] = struct{}{}
+			}
+		}
+	}
+}
+
+func collectFilesByExtension(fileList []string, extensionList []string, foundFiles map[string]struct{}) {
+	for _, ext := range extensionList {
+		for _, file := range fileList {
+			if strings.HasSuffix(file, ext) {
+				foundFiles[file] = struct{}{}
+			}
+		}
+	}
+}
+
+func collectDirsByPattern(dirList []string, dirNames []string, foundDirs map[string]struct{}) {
+	for _, reg := range dirNames {
+		for _, dir := range dirList {
+			m, err := regexp.MatchString(reg, dir)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("Unable to locate the %s directory", dir)
+			} else if m {
+				foundDirs[dir] = struct{}{}
+			}
+		}
+	}
+}
+
 // FindFile locates a file (fileName) in a list of input directories (dir)
 // If the file is found, then it returns true along with the file location
 // Otherwise it returns false with an empty string
 func FindFile(fileName string, dirs []string) (bool, string) {
 	fileList, _ := GetFileAndDirList(dirs)
 	for _, file := range fileList {
-		fileReg := `/` + fileName + `$`
-		m, err := regexp.MatchString(fileReg, file)
-		if err != nil {
-			log.Fatal().Err(err).Msgf("We had an issue locating the %v file.", fileReg)
-		} else {
-			if m {
-				return true, file
-			}
+		if filepath.Base(file) == fileName {
+			return true, file
 		}
 	}
 	return false, ""

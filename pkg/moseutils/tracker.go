@@ -6,7 +6,7 @@ package moseutils
 
 import (
 	"bufio"
-	"errors"
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -16,33 +16,39 @@ import (
 func RemoveTracker(filePath string, osTarget string, destroy bool) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal().Msgf("Unable to open file %s, exiting...", filePath)
+		log.Fatal().Err(err).Msgf("Unable to open file %s, exiting...", filePath)
 	}
+
 	scanner := bufio.NewScanner(f)
 	scanner.Split(bufio.ScanLines)
-	var deleted map[string]bool
-	var ans bool
-	deleted = make(map[string]bool)
+	deleted := make(map[string]struct{})
 	for scanner.Scan() {
 		// Ask to remove file for cleanup
-		ans = false
 		filename := scanner.Text()
-		if deleted[filename] {
+		if _, seen := deleted[filename]; seen {
 			continue
 		}
+		answer := false
 		if !destroy {
-			ans, err = AskUserQuestion("Would you like to remove this file: "+filename+"? ", osTarget)
+			answer, err = AskUserQuestion("Would you like to remove this file: "+filename+"? ", osTarget)
 			if err != nil {
-				log.Fatal().Msg("Quitting cleanup...")
+				_ = f.Close()
+				log.Fatal().Err(err).Msg("Quitting cleanup...")
 			}
 		}
-		if ans || destroy {
-			err = os.RemoveAll(filename)
-			if err != nil {
+		if answer || destroy {
+			if err = os.RemoveAll(filename); err != nil {
 				ColorMsgf("Error removing file %s", filename)
 			}
-			deleted[filename] = true
+			deleted[filename] = struct{}{}
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		_ = f.Close()
+		log.Fatal().Err(err).Msg("Failed while reading tracker file")
+	}
+	if err := f.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed to close tracker file")
 	}
 }
 
@@ -50,13 +56,12 @@ func RemoveTracker(filePath string, osTarget string, destroy bool) {
 func TrackChanges(filePath string, content string) (bool, error) {
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return false, errors.New("failure with os.OpenFile")
+		return false, fmt.Errorf("open track file %s: %w", filePath, err)
 	}
 	defer f.Close()
 
-	_, err = f.WriteString(content + "\n")
-	if err != nil {
-		return false, errors.New("failure writing the TrackChanges string")
+	if _, err = f.WriteString(content + "\n"); err != nil {
+		return false, fmt.Errorf("write track entry: %w", err)
 	}
 
 	return true, nil

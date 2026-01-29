@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -80,7 +81,7 @@ func fileUploader(w http.ResponseWriter, r *http.Request) {
 
 	checkInvalidChars(handler.Filename)
 
-	f, err := os.OpenFile("keys/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile(filepath.Join("keys", handler.Filename), os.O_WRONLY|os.O_CREATE, 0666)
 
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -103,12 +104,12 @@ func orgUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	var org Org
 	if r.Body == nil {
-		http.Error(w, "Please send a request body", 400)
+		http.Error(w, "Please send a request body", http.StatusBadRequest)
 		return
 	}
 	err := json.NewDecoder(r.Body).Decode(&org)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	log.Info().Msgf("Successfully uploaded %v", org.Name)
@@ -121,7 +122,11 @@ func orgUpload(w http.ResponseWriter, r *http.Request) {
 func CreateUploadRoute(userInput userinput.UserInput) {
 	var ip string
 	if userInput.LocalIP == "" {
-		ip, _ = netutils.GetLocalIP()
+		var err error
+		ip, err = netutils.GetLocalIP()
+		if err != nil {
+			log.Error().Err(err).Msg("Unable to get local IP address")
+		}
 		if ip == "" {
 			log.Error().Msg("Unable to get local IP address")
 		}

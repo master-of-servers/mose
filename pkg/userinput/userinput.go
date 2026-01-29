@@ -6,6 +6,7 @@ package userinput
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -74,14 +75,14 @@ func (i *UserInput) StartTakeover() {
 	if i.FileUpload != "" {
 		targetBin := filepath.Join(i.PayloadDirectory, i.CMTarget+"-"+strings.ToLower(i.OSTarget))
 		files := []string{filepath.Join(i.PayloadDirectory, filepath.Base(i.FileUpload)), targetBin}
-		archiveLoc := filepath.Join(i.PayloadDirectory, "/files.tar")
+		archiveLoc := filepath.Join(i.PayloadDirectory, "files.tar")
 		if i.FilePath != "" {
 			archiveLoc = i.FilePath
 		}
 
 		// Specify tar for the archive type if no extension is defined
 		if filepath.Ext(archiveLoc) == "" {
-			archiveLoc = archiveLoc + ".tar"
+			archiveLoc += ".tar"
 		}
 
 		log.Info().Msgf("Compressing files %v into %s", files, archiveLoc)
@@ -101,77 +102,91 @@ func (i *UserInput) StartTakeover() {
 
 // GenerateParams adds the specified input parameters into the payload
 func (i *UserInput) GenerateParams() {
-	var origFileUpload string
-
 	paramLoc := filepath.Join(i.BaseDir, "cmd/", i.CMTarget, "main/tmpl")
 
-	// Generate the params for a given target
-	s, err := pkger.Open(filepath.Join("/", paramLoc, "params.tmpl"))
-
+	t, err := parseParamsTemplate(paramLoc)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	defer s.Close()
 
+	if err := writeParamsFile(i, t); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	if err := normalizeFilePath(i); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	normalizeServePort(i)
+}
+
+func parseParamsTemplate(paramLoc string) (*template.Template, error) {
+	content, err := loadTemplate(filepath.Join("/", paramLoc, "params.tmpl"))
+	if err != nil {
+		return nil, err
+	}
+	return template.New("params").Parse(content)
+}
+
+func loadTemplate(templatePath string) (string, error) {
+	s, err := pkger.Open(templatePath)
+	if err != nil {
+		return "", err
+	}
 	dat := new(strings.Builder)
-	_, err = io.Copy(dat, s)
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+	if _, err := io.Copy(dat, s); err != nil {
+		_ = s.Close()
+		return "", err
 	}
-
-	t, err := template.New("params").Parse(dat.String())
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+	if err := s.Close(); err != nil {
+		return "", err
 	}
+	return dat.String(), nil
+}
 
-	f, err := os.Create(filepath.Join(i.BaseDir, "/cmd/", i.CMTarget, "main/params.go"))
-
+func writeParamsFile(i *UserInput, t *template.Template) error {
+	paramsPath := filepath.Join(i.BaseDir, "/cmd/", i.CMTarget, "main/params.go")
+	f, err := os.Create(paramsPath)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		return err
 	}
-	// Temporarily set UserInput.FileUpload to the name of the file uploaded to avoid pathing issues in the payload
+	origFileUpload := i.FileUpload
 	if i.FileUpload != "" {
-		origFileUpload = i.FileUpload
 		i.FileUpload = filepath.Base(i.FileUpload)
 	}
-	err = t.Execute(f, i)
-
-	f.Close()
-
-	if i.FileUpload != "" {
+	defer func() {
 		i.FileUpload = origFileUpload
-	}
+	}()
 
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+	if err := t.Execute(f, i); err != nil {
+		_ = f.Close()
+		return err
 	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return nil
+}
 
+func normalizeFilePath(i *UserInput) error {
 	dir, _ := path.Split(i.FilePath)
 
 	// Check if dir exists and filePath isn't empty
 	if _, err := os.Stat(dir); os.IsNotExist(err) && dir != "" && i.FilePath != "" {
-		log.Fatal().Msgf("Location %s does not exist", i.FilePath)
+		return fmt.Errorf("location %s does not exist", i.FilePath)
 	}
 
 	if dir == "" && i.FilePath != "" {
-		dir, err := os.Getwd()
+		wd, err := os.Getwd()
 		if err != nil {
-			log.Fatal().Msg("Couldn't get current working directory")
+			return fmt.Errorf("get working directory: %w", err)
 		}
-
-		i.FilePath = filepath.Join(dir, i.FilePath)
+		i.FilePath = filepath.Join(wd, i.FilePath)
 	}
+	return nil
+}
 
-	// Set port option
+func normalizeServePort(i *UserInput) {
 	if !i.ServeSSL && i.WebSrvPort == 443 {
 		i.WebSrvPort = 8090
-	}
-
-	// Put it back
-	if i.FileUpload != "" {
-		i.FileUpload = origFileUpload
 	}
 }
 
@@ -183,7 +198,9 @@ func (i *UserInput) GeneratePayload() {
 		log.Info().Msgf("Generating %s payload to run %s on a %s system, please wait...", i.CMTarget, filepath.Base(i.FileUpload), strings.ToLower(i.OSTarget))
 	}
 
-	_ = os.Mkdir(i.PayloadDirectory, 0755)
+	if err := os.MkdirAll(i.PayloadDirectory, 0755); err != nil {
+		log.Fatal().Err(err).Msg("Failed to create payload directory")
+	}
 
 	payload := filepath.Join(i.PayloadDirectory, i.CMTarget+"-"+strings.ToLower(i.OSTarget))
 
@@ -204,7 +221,7 @@ func (i *UserInput) GeneratePayload() {
 
 	// FilePath specified with command to run
 	if i.FilePath != "" && i.FileUpload == "" {
-		log.Info().Msgf("Creating binary at: " + i.FilePath)
+		log.Info().Msgf("Creating binary at: %s", i.FilePath)
 		payload = i.FilePath
 		if !filepath.IsAbs(i.FilePath) {
 			payload = filepath.Join(i.BaseDir, i.FilePath)
@@ -215,7 +232,9 @@ func (i *UserInput) GeneratePayload() {
 	if i.FilePath != "" && i.FileUpload != "" {
 		log.Info().Msgf("FilePath supplied - the tar file will be created in %s.", i.FilePath)
 		log.Info().Msg("File Upload specified - copying payload into the payloads directory.")
-		system.CpFile(i.FileUpload, filepath.Join(i.PayloadDirectory, filepath.Base(i.FileUpload)))
+		if err := system.CpFile(i.FileUpload, filepath.Join(i.PayloadDirectory, filepath.Base(i.FileUpload))); err != nil {
+			log.Fatal().Err(err).Msgf("Failed to copy input file upload (%v) exiting", i.FileUpload)
+		}
 	}
 
 	cmd := exec.Command("pkger")
@@ -238,10 +257,10 @@ func (i *UserInput) GeneratePayload() {
 func (i *UserInput) SetLocalIP() {
 	if i.LocalIP == "" {
 		ip, err := netutils.GetLocalIP()
-		i.LocalIP = ip
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
+		i.LocalIP = ip
 	}
 }
 

@@ -71,11 +71,11 @@ func backdoorTop(topLoc string) {
 		log.Fatal().Err(err).Msg("Quitting...")
 	}
 	// I am going to prompt questions before hand because going back through this is a monster
-	ans, err := moseutils.AskUserQuestion("Do you want to target a specific environment and group? ", a.OsTarget)
+	answer, err := moseutils.AskUserQuestion("Do you want to target a specific environment and group? ", a.OsTarget)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Quitting...")
 	}
-	dontInjectAll := ans
+	dontInjectAll := answer
 
 	// mapOfInjects will be a hashmap of hashmaps that point to what host and what fileroot we want to inject
 	// Run this with knowledge that we want to inject all and if not we return the map of injects to prompt for questions
@@ -83,7 +83,7 @@ func backdoorTop(topLoc string) {
 	addAllGroup := doesDefaultGroupExist(mapOfInjects)
 
 	moseutils.ColorMsgf("Available environments and groups in top.sls")
-	validBool, validIndex := validateIndicies(mapOfInjects)
+	validBool, validIndex := validateIndices(mapOfInjects)
 
 	if !dontInjectAll {
 		if !addAllGroup {
@@ -95,9 +95,9 @@ func backdoorTop(topLoc string) {
 		return
 	}
 
-	if ans, err := moseutils.IndexedUserQuestion("Provide index of fileroot and hosts you would like to inject (ex. 1,3,...)", a.OsTarget, validBool, func() { prettyPrint(validIndex) }); err == nil {
+	if answers, err := moseutils.IndexedUserQuestion("Provide index of fileroot and hosts you would like to inject (ex. 1,3,...)", a.OsTarget, validBool, func() { prettyPrint(validIndex) }); err == nil {
 		// Need to take the responses and then inject
-		for i, b := range ans {
+		for i, b := range answers {
 			if b {
 				for k, v := range mapOfInjects {
 					for k1 := range v {
@@ -134,10 +134,10 @@ func doesDefaultGroupExist(data map[string]map[string]bool) bool {
 	return false
 }
 
-func validateIndicies(data map[string]map[string]bool) (map[int]bool, map[int]string) {
+func validateIndices(data map[string]map[string]bool) (map[int]bool, map[int]string) {
 	validIndex := make(map[int]string, 0)
 	validIndexBool := make(map[int]bool, 0)
-	log.Debug().Msg("Displaying indicies")
+	log.Debug().Msg("Displaying indices")
 	for k, v := range data {
 		ind := 0
 		for k1 := range v {
@@ -158,60 +158,67 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 	}
 	for k, v := range unmarshalled { // k is the fileroot if file_roots is not in the file
 		if k == "file_roots" { // There are two general cases for the top.sls. You can have a root element file_roots (optional)
-			for fileroot, frv := range v.(map[string]interface{}) { // unpack the fileroot such as base: interface{}
-				isAllFound := false
-
-				if injectionMap == nil {
-					injectPointsCreate[fileroot] = make(map[string]bool)
-				}
-				for hosts := range frv.(map[string]interface{}) { // now unpack the hosts it will run on: '*': interface{}
-					if hosts == "*" || hosts == "'*'" { // check if all cases exist
-						isAllFound = true
-					}
-					if injectAll { // if this is set we just inject regardless of host
-						unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts] = append(unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
-					}
-					// Add hosts to the injection Points
-					if injectionMap == nil {
-						injectPointsCreate[fileroot][hosts] = true
-					} else if injectionMap[fileroot][hosts] {
-						unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts] = append(unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
-					}
-				}
-				if !isAllFound && addAllIfNone { // '*' is not found so we make our own and add new key to base, prod, dev, etc..
-					unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})["*"] = []string{saltState}
-				}
-			}
-		} else {
-			log.Debug().Msg("No file_roots in top.sls")
-			isAllFound := false
-			if injectionMap == nil {
-				injectPointsCreate[k] = make(map[string]bool)
-			}
-			for hosts := range v.(map[string]interface{}) {
-				log.Debug().Msgf("Host found %v", hosts)
-				if hosts == "*" || hosts == "'*'" { // check if all case exists
-					isAllFound = true
-				}
-				if injectAll { // append to list of states to apply
-					unmarshalled[k].(map[string]interface{})[hosts] = append(unmarshalled[k].(map[string]interface{})[hosts].([]interface{}), saltState)
-				}
-				// Add hosts to the injection Points
-				if injectionMap == nil {
-					injectPointsCreate[k][hosts] = false
-				} else if injectionMap[k][hosts] {
-					unmarshalled[k].(map[string]interface{})[hosts] = append(unmarshalled[k].(map[string]interface{})[hosts].([]interface{}), saltState)
-					log.Debug().Msgf("Injection points updated %v", unmarshalled[k].(map[string]interface{})[hosts].([]interface{}))
-				}
-
-			}
-			if !isAllFound && addAllIfNone { // '*' is not found so we make our own and add new key to base, prod, dev, etc...
-				log.Debug().Msg("In all found if check")
-				unmarshalled[k].(map[string]interface{})["*"] = []string{saltState}
-			}
+			injectFileRoots(unmarshalled, v, injectAll, addAllIfNone, injectionMap, injectPointsCreate)
+			continue
 		}
+		injectTopLevel(unmarshalled, k, v, injectAll, addAllIfNone, injectionMap, injectPointsCreate)
 	}
 	return unmarshalled, injectPointsCreate
+}
+
+func injectFileRoots(unmarshalled map[string]interface{}, value interface{}, injectAll bool, addAllIfNone bool, injectionMap map[string]map[string]bool, injectPointsCreate map[string]map[string]bool) {
+	for fileroot, frv := range value.(map[string]interface{}) { // unpack the fileroot such as base: interface{}
+		isAllFound := false
+
+		if injectionMap == nil {
+			injectPointsCreate[fileroot] = make(map[string]bool)
+		}
+		for hosts := range frv.(map[string]interface{}) { // now unpack the hosts it will run on: '*': interface{}
+			if hosts == "*" || hosts == "'*'" { // check if all cases exist
+				isAllFound = true
+			}
+			if injectAll { // if this is set we just inject regardless of host
+				unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts] = append(unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
+			}
+			// Add hosts to the injection Points
+			if injectionMap == nil {
+				injectPointsCreate[fileroot][hosts] = true
+			} else if injectionMap[fileroot][hosts] {
+				unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts] = append(unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
+			}
+		}
+		if !isAllFound && addAllIfNone { // '*' is not found so we make our own and add new key to base, prod, dev, etc..
+			unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})["*"] = []string{saltState}
+		}
+	}
+}
+
+func injectTopLevel(unmarshalled map[string]interface{}, fileroot string, value interface{}, injectAll bool, addAllIfNone bool, injectionMap map[string]map[string]bool, injectPointsCreate map[string]map[string]bool) {
+	log.Debug().Msg("No file_roots in top.sls")
+	isAllFound := false
+	if injectionMap == nil {
+		injectPointsCreate[fileroot] = make(map[string]bool)
+	}
+	for hosts := range value.(map[string]interface{}) {
+		log.Debug().Msgf("Host found %v", hosts)
+		if hosts == "*" || hosts == "'*'" { // check if all case exists
+			isAllFound = true
+		}
+		if injectAll { // append to list of states to apply
+			unmarshalled[fileroot].(map[string]interface{})[hosts] = append(unmarshalled[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
+		}
+		// Add hosts to the injection Points
+		if injectionMap == nil {
+			injectPointsCreate[fileroot][hosts] = false
+		} else if injectionMap[fileroot][hosts] {
+			unmarshalled[fileroot].(map[string]interface{})[hosts] = append(unmarshalled[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
+			log.Debug().Msgf("Injection points updated %v", unmarshalled[fileroot].(map[string]interface{})[hosts].([]interface{}))
+		}
+	}
+	if !isAllFound && addAllIfNone { // '*' is not found so we make our own and add new key to base, prod, dev, etc...
+		log.Debug().Msg("In all found if check")
+		unmarshalled[fileroot].(map[string]interface{})["*"] = []string{saltState}
+	}
 }
 
 func createState(topLoc string, cmd string) {
@@ -250,21 +257,23 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 		FilePath:  uploadFilePath,
 	}
 
-	s, err := pkger.Open("/tmpl/saltState.tmpl")
+	templatePath := "/tmpl/saltState.tmpl"
 	if uploadFileName != "" {
-		s, err = pkger.Open("/tmpl/saltFileUploadState.tmpl")
+		templatePath = "/tmpl/saltFileUploadState.tmpl"
 	}
-	defer s.Close()
-
+	s, err := pkger.Open(templatePath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Parse: ")
 	}
 
 	dat := new(strings.Builder)
 	_, err = io.Copy(dat, s)
-
 	if err != nil {
+		_ = s.Close()
 		log.Fatal().Err(err).Msg("")
+	}
+	if err := s.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing salt template")
 	}
 
 	t, err := template.New("saltState").Parse(dat.String())
@@ -292,30 +301,30 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 
 func doCleanup(siteLoc string) {
 	moseutils.TrackChanges(cleanupFile, cleanupFile)
-	ans, err := moseutils.AskUserQuestion("Would you like to remove all files associated with a previous run?", osTarget)
+	answer, err := moseutils.AskUserQuestion("Would you like to remove all files associated with a previous run?", osTarget)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Quitting: ")
 	}
-	moseutils.RemoveTracker(cleanupFile, osTarget, ans)
+	moseutils.RemoveTracker(cleanupFile, osTarget, answer)
 
 	path := siteLoc
 	if saltBackupLoc != "" {
 		path = filepath.Join(saltBackupLoc, filepath.Base(siteLoc))
 	}
 
-	path = path + ".bak.mose"
+	path += ".bak.mose"
 
 	if !system.FileExists(path) {
 		log.Info().Msgf("Backup file %s does not exist, skipping", path)
 	}
 	ans2 := false
-	if !ans {
+	if !answer {
 		ans2, err = moseutils.AskUserQuestion(fmt.Sprintf("Overwrite %s with %s", siteLoc, path), osTarget)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Quitting: ")
 		}
 	}
-	if ans || ans2 {
+	if answer || ans2 {
 		system.CpFile(path, siteLoc)
 		os.Remove(path)
 	}
@@ -404,7 +413,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if ans, err := moseutils.AskUserQuestion("Do you want to create a backup of the top.sls? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", a.OsTarget); ans && err == nil {
+	if answer, err := moseutils.AskUserQuestion("Do you want to create a backup of the top.sls? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", a.OsTarget); answer && err == nil {
 		backupSite(topLoc)
 	} else if err != nil {
 		log.Fatal().Msgf("Error backing up %s: %v, exiting...", topLoc, err)

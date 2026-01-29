@@ -5,13 +5,11 @@
 package cmd
 
 import (
-	"github.com/rs/zerolog/log"
-
 	"os"
 
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
-
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -29,25 +27,24 @@ var chefCmd = &cobra.Command{
 		UserInput.GenerateParams()
 		UserInput.GeneratePayload()
 		UserInput.StartTakeover()
-		ans, err := moseutils.AskUserQuestion("Is your target a chef workstation? ", UserInput.OSTarget)
+		answer, err := moseutils.AskUserQuestion("Is your target a chef workstation? ", UserInput.OSTarget)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Quitting")
 		}
-		if ans {
+		if answer {
 			log.Info().Msg("Nothing left to do locally, continue all remaining activities on the target workstation.")
 			os.Exit(0)
 		}
 
-		ans, err = moseutils.AskUserQuestion("Is your target a chef server? ", UserInput.OSTarget)
+		answer, err = moseutils.AskUserQuestion("Is your target a chef server? ", UserInput.OSTarget)
 		if err != nil {
-			log.Fatal().Msg("Quitting")
+			log.Fatal().Err(err).Msg("Quitting")
 		}
-		if ans {
+		if answer {
 			chefutils.SetupChefWorkstationContainer(UserInput)
 			os.Exit(0)
-		} else {
-			log.Error().Msg("Invalid chef target")
 		}
+		log.Error().Msg("Invalid chef target")
 	},
 }
 
