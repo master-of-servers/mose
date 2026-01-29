@@ -50,18 +50,20 @@ var NOCOLOR bool
 func AskUserQuestion(question string, osTarget string) (bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		ColorMsgf(question + "[Y/n/q]")
+		ColorMsgf("%s", question+"[Y/n/q]")
 		text, _ := reader.ReadString('\n')
+		if osTarget == "windows" {
+			text = strings.ReplaceAll(text, "\r\n", "")
+		} else {
+			text = strings.ReplaceAll(text, "\n", "")
+		}
 		if strings.Contains(text, "Y") {
-			if osTarget == "windows" {
-				strings.Replace(text, "\r\n", "", -1)
-			} else {
-				strings.Replace(text, "\n", "", -1)
-			}
 			return true, nil
-		} else if strings.Contains(text, "q") {
-			return false, errors.New("Quit")
-		} else if strings.Contains(text, "n") {
+		}
+		if strings.Contains(text, "q") {
+			return false, errors.New("quit")
+		}
+		if strings.Contains(text, "n") {
 			return false, nil
 		}
 		log.Error().Msg("Invalid input")
@@ -72,37 +74,45 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 // The input must be a number, which correspond to an index of an answer.
 // The operating system must be specified as an input in order to handle the line ending properly;
 // Windows uses a different line ending scheme than Unix systems
-// pp is used to pass in an anonymous function for pretty printing - see validateIndicies() in cmd/github.com/master-of-servers/mose/ansible/main.go for an example
+// pp is used to pass in an anonymous function for pretty printing - see validateIndices() in cmd/github.com/master-of-servers/mose/ansible/main.go for an example
 // Loosely based on https://tutorialedge.net/golang/reading-console-input-golang/
 func IndexedUserQuestion(question string, osTarget string, validIndices map[int]bool, pp func()) (map[int]bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		var err error
-		ColorMsgf(question)
+		ColorMsgf("%s", question)
 		text, _ := reader.ReadString('\n')
 		if strings.Contains(text, "q") {
-			return nil, errors.New("Quit")
+			return nil, errors.New("quit")
 		}
 		if osTarget == "windows" {
-			text = text[:len(text)-2]
+			text = strings.TrimSuffix(text, "\r\n")
 		} else {
-			text = text[:len(text)-1]
+			text = strings.TrimSuffix(text, "\n")
+		}
+		if strings.TrimSpace(text) == "" {
+			log.Error().Msg("No input provided")
+			continue
 		}
 		strnums := strings.Split(text, ",")
 		nums := make(map[int]bool)
 		for _, n := range strnums {
 			n = strings.TrimSpace(n)
+			if n == "" {
+				continue
+			}
 			num, e := strconv.Atoi(n)
-			if e != nil {
+			switch {
+			case e != nil:
 				log.Error().Msg("Number provided is not an integer")
 				err = e
-			} else if !validIndices[num] {
+			case !validIndices[num]:
 				log.Error().Msg("Number is not valid, try again")
 				if pp != nil {
 					pp()
 				}
 				err = errors.New("input number is not a valid index")
-			} else {
+			default:
 				nums[num] = true
 			}
 		}
@@ -116,14 +126,14 @@ func IndexedUserQuestion(question string, osTarget string, validIndices map[int]
 func ColorMsgf(s string, i ...interface{}) {
 	if NOCOLOR {
 		if len(i) > 0 {
-			log.Log().Msgf(s, i...)
+			log.Log().Msg(fmt.Sprintf(s, i...))
 			return
 		}
 		log.Log().Msg(s)
 		return
 	}
 	if len(i) > 0 {
-		log.Log().Msgf(fmt.Sprintf("\x1b[%dm%v\x1b[0m", ColorGreen, s), i...)
+		log.Log().Msg(fmt.Sprintf("\x1b[%dm%v\x1b[0m", ColorGreen, fmt.Sprintf(s, i...)))
 		return
 	}
 	log.Log().Msg(fmt.Sprintf("\x1b[%dm%v\x1b[0m", ColorGreen, s))
@@ -166,10 +176,11 @@ func SetupLogger(debug bool) {
 				l = Colorizer(Colorizer("MSG", ColorGreen, NOCOLOR), ColorBold, NOCOLOR)
 			}
 		} else {
-			if i == nil {
+			switch v := i.(type) {
+			case nil:
 				l = Colorizer(Colorizer("MSG", ColorGreen, NOCOLOR), ColorBold, NOCOLOR)
-			} else {
-				l = strings.ToUpper(fmt.Sprintf("%s", i))[0:3]
+			default:
+				l = strings.ToUpper(fmt.Sprintf("%s", v))[0:3]
 			}
 		}
 		return l

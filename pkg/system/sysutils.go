@@ -7,11 +7,10 @@ package system
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/rs/zerolog/log"
@@ -20,13 +19,13 @@ import (
 // CpFile is used to copy a file from a source (src) to a destination (dst)
 // If there is a failure to do so, an error is returned
 func CpFile(src string, dst string) error {
-	input, err := ioutil.ReadFile(src)
+	input, err := os.ReadFile(src)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error reading from %s", src)
 		return err
 	}
 
-	err = ioutil.WriteFile(dst, input, 0644)
+	err = os.WriteFile(dst, input, 0644)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error writing to %s", dst)
 		return err
@@ -62,8 +61,7 @@ func ChownR(path string, uid int, gid int) error {
 		if err != nil {
 			return err
 		}
-		_ = os.Chown(name, uid, gid)
-		return nil
+		return os.Chown(name, uid, gid)
 	})
 }
 
@@ -72,16 +70,14 @@ func ChownR(path string, uid int, gid int) error {
 // if it matches any prefix $HOME, ~/, / then we need to treat them separately
 func CreateFilePath(text string, baseDir string) (string, error) {
 	var path string
-	_, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-	if filepath.HasPrefix(text, "~/") || filepath.HasPrefix(text, "$HOME") {
+	switch {
+	case strings.HasPrefix(text, "~/") || strings.HasPrefix(text, "$HOME"):
 		path = filepath.Base(text)
 		_, path = FindFile(path, []string{"/root", "/home"})
-	} else if filepath.HasPrefix(text, "/") {
+	case strings.HasPrefix(text, "/"):
 		path = text
-	} else {
+	default:
+		var err error
 		path, err = filepath.Abs(filepath.Join(baseDir, text))
 		if err != nil {
 			return "", err
@@ -96,7 +92,7 @@ func RunCommand(cmd string, args ...string) (string, error) {
 	out, err := exec.Command(cmd, args...).CombinedOutput()
 
 	if err != nil {
-		return "", fmt.Errorf("%s %s %s %s", cmd, args, out, err)
+		return "", fmt.Errorf("run %s %v: %w (output: %s)", cmd, args, err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }

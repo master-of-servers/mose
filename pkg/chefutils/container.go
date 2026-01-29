@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path"
@@ -19,15 +18,15 @@ import (
 	"time"
 
 	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/system"
 	"github.com/master-of-servers/mose/pkg/userinput"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/markbates/pkger"
-	"github.com/mholt/archiver"
 )
 
 var (
@@ -44,33 +43,27 @@ type knifeTemplateArgs struct {
 	TargetValidatorName string
 }
 
-func copyFiles(cli *client.Client, id string, files []string, tarLocation string, dockerLocation string) {
-	ctx := context.Background()
-
-	tar := archiver.Tar{
-		OverwriteExisting: true,
-	}
-
-	if err := tar.Archive(files, tarLocation); err != nil {
+func copyFiles(ctx context.Context, cli *dockerclient.Client, id string, files []string, tarLocation string, dockerLocation string) {
+	if _, err := system.ArchiveFiles(files, tarLocation); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	reader, err := os.Open(tarLocation)
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	err = cli.CopyToContainer(ctx, id, dockerLocation, reader, types.CopyToContainerOptions{})
-
 	if err != nil {
+		_ = reader.Close()
 		log.Fatal().Err(err).Msg("")
+	}
+	if err := reader.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing tar archive")
 	}
 }
 
-func simpleRun(cli *client.Client, id string, cmd []string) types.IDResponse {
-	ctx := context.Background()
-
+func simpleRun(ctx context.Context, cli *dockerclient.Client, id string, cmd []string) types.IDResponse {
 	execID, err := cli.ContainerExecCreate(ctx,
 		id,
 		types.ExecConfig{
@@ -91,13 +84,8 @@ func simpleRun(cli *client.Client, id string, cmd []string) types.IDResponse {
 	return execID
 }
 
-func build(cli *client.Client) {
-	t := archiver.Tar{
-		OverwriteExisting: true,
-	}
-
-	err := t.Archive([]string{"dockerfiles"}, "tarfiles/dockerfiles.tar")
-	if err != nil {
+func build(ctx context.Context, cli *dockerclient.Client) {
+	if _, err := system.ArchiveFiles([]string{"dockerfiles"}, "tarfiles/dockerfiles.tar"); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
@@ -105,31 +93,35 @@ func build(cli *client.Client) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	defer dockerBuildContext.Close()
 
 	opts := types.ImageBuildOptions{
 		Tags:       []string{userInput.ImageName},
 		Dockerfile: "dockerfiles/Dockerfile",
 	}
 
-	ibr, err := cli.ImageBuild(context.Background(), dockerBuildContext, opts)
-
+	ibr, err := cli.ImageBuild(ctx, dockerBuildContext, opts)
 	if err != nil {
+		_ = dockerBuildContext.Close()
 		log.Fatal().Err(err).Msg("Error building image")
 	}
-	defer ibr.Body.Close()
 
-	response, err := ioutil.ReadAll(ibr.Body)
+	response, err := io.ReadAll(ibr.Body)
 	if err != nil {
+		_ = ibr.Body.Close()
+		_ = dockerBuildContext.Close()
 		log.Fatal().Err(err).Msg("")
+	}
+	if err := ibr.Body.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing image build response")
+	}
+	if err := dockerBuildContext.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing docker build context")
 	}
 	log.Debug().Msgf("********* %s **********", ibr.OSType)
 	log.Debug().Msg(string(response))
 }
 
-func run(cli *client.Client) string {
-	ctx := context.Background()
-
+func run(ctx context.Context, cli *dockerclient.Client) string {
 	hostconfig := &container.HostConfig{}
 	if userInput.Rhost != "" {
 		hostconfig = &container.HostConfig{
@@ -151,7 +143,7 @@ func run(cli *client.Client) string {
 	)
 
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("Error creating container")
 	}
 
 	log.Debug().Msgf("Running container with id %v", resp.ID)
@@ -163,82 +155,23 @@ func run(cli *client.Client) string {
 	return resp.ID
 }
 
-func copyToDocker(cli *client.Client, id string) {
-	copyFiles(cli, id, []string{userInput.ChefClientKey, userInput.ChefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
+func copyToDocker(ctx context.Context, cli *dockerclient.Client, id string) {
+	copyFiles(ctx, cli, id, []string{userInput.ChefClientKey, userInput.ChefValidationKey, "dockerfiles/knife.rb"}, "tarfiles/keys_knife.tar", "root/.chef/")
 
 	log.Info().Msg("Running knife ssl fetch, please wait...")
-	_ = simpleRun(cli, id, []string{"knife", "ssl", "fetch"})
+	_ = simpleRun(ctx, cli, id, []string{"knife", "ssl", "fetch"})
 }
 
 // runMoseInContainer will upload the MOSE payload for a Chef Workstation
 // into a container, so we can run it against a Chef Server
-func runMoseInContainer(cli *client.Client, id string, osTarget string) {
-	ctx := context.Background()
-
-	payloadPath := "payloads/chef-linux"
-	if userInput.FilePath != "" {
-		payloadPath = userInput.FilePath
-	}
-
+func runMoseInContainer(ctx context.Context, cli *dockerclient.Client, id string, osTarget string) {
+	payloadPath := resolvePayloadPath()
 	binPath := path.Join("/", path.Base(payloadPath))
 
-	filesToCopy := []string{payloadPath}
+	copyFiles(ctx, cli, id, resolveFilesToCopy(payloadPath), "tarfiles/main.tar", "/")
+	_ = simpleRun(ctx, cli, id, []string{"chmod", "u+x", binPath})
 
-	if userInput.FileUpload != "" {
-		filesToCopy = append(filesToCopy, path.Join("payloads", path.Base(userInput.FileUpload)))
-	}
-
-	copyFiles(cli, id, filesToCopy, "tarfiles/main.tar", "/")
-
-	_ = simpleRun(cli, id, []string{"chmod", "u+x", binPath})
-
-	execID, err := cli.ContainerExecCreate(ctx,
-		id,
-		types.ExecConfig{
-			AttachStderr: true,
-			AttachStdin:  true,
-			AttachStdout: true,
-			Cmd:          []string{binPath, "-i"},
-			Tty:          true,
-			Detach:       false,
-		},
-	)
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	log.Debug().Msgf("Running container exec and attach for container ID %v", execID.ID)
-	hj, err := cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{Detach: false, Tty: true})
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	// Parse the hijacked reader for the agents
-	var agentString = regexp.MustCompile("(?ms)BEGIN NODE LIST \\[(?P<nodes>.*)\\] END NODE LIST")
-	names := agentString.SubexpNames()
-
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(hj.Reader)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-	nodes := make([]string, 0)
-	// Print output from running mose in the workstation container
-	log.Debug().Msg(buf.String())
-	for _, match := range agentString.FindAllStringSubmatch(buf.String(), -1) {
-		for groupID, group := range match {
-			name := names[groupID]
-			if name != "" {
-				moseutils.ColorMsgf("The following nodes were identified: %v", group)
-				nodes = append(nodes, strings.Split(group, " ")...)
-			}
-		}
-	}
-
-	hj.Close()
-
+	nodes := fetchNodesFromContainer(ctx, cli, id, binPath)
 	if len(nodes) < 1 {
 		log.Log().Msg("No nodes found, exiting...")
 		signalChan <- os.Interrupt
@@ -255,38 +188,104 @@ func runMoseInContainer(cli *client.Client, id string, osTarget string) {
 
 	log.Debug().Msgf("Command to be run in the container: %v", append([]string{binPath, "-n"}, agents...))
 
-	execID, err = cli.ContainerExecCreate(ctx,
+	runMoseAgainstAgents(ctx, cli, id, binPath, agents)
+}
+
+func resolvePayloadPath() string {
+	if userInput.FilePath != "" {
+		return userInput.FilePath
+	}
+	return "payloads/chef-linux"
+}
+
+func resolveFilesToCopy(payloadPath string) []string {
+	filesToCopy := []string{payloadPath}
+	if userInput.FileUpload != "" {
+		filesToCopy = append(filesToCopy, path.Join("payloads", path.Base(userInput.FileUpload)))
+	}
+	return filesToCopy
+}
+
+func fetchNodesFromContainer(ctx context.Context, cli *dockerclient.Client, id string, binPath string) []string {
+	execID, err := cli.ContainerExecCreate(ctx,
 		id,
 		types.ExecConfig{
 			AttachStderr: true,
 			AttachStdin:  true,
 			AttachStdout: true,
-			Cmd:          append([]string{binPath, "-n"}, strings.Join(agents[:], " ")),
+			Cmd:          []string{binPath, "-i"},
 			Tty:          true,
 			Detach:       false,
 		},
 	)
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	log.Debug().Msgf("Running container exec and attach for container ID %v", execID.ID)
+	hj, err := cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{Detach: false, Tty: true})
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
 
-	hj, err = cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{Detach: false, Tty: true})
+	buf := new(bytes.Buffer)
+	if _, err = buf.ReadFrom(hj.Reader); err != nil {
+		hj.Close()
+		log.Fatal().Err(err).Msg("")
+	}
+	output := buf.String()
+	log.Debug().Msg(output)
+	nodes := parseNodesFromOutput(output)
+	hj.Close()
+	return nodes
+}
 
+func parseNodesFromOutput(output string) []string {
+	agentString := regexp.MustCompile(`(?ms)BEGIN NODE LIST \[(?P<nodes>.*)\] END NODE LIST`)
+	names := agentString.SubexpNames()
+
+	nodes := make([]string, 0)
+	for _, match := range agentString.FindAllStringSubmatch(output, -1) {
+		for groupID, group := range match {
+			if names[groupID] != "" {
+				moseutils.ColorMsgf("The following nodes were identified: %v", group)
+				nodes = append(nodes, strings.Split(group, " ")...)
+			}
+		}
+	}
+	return nodes
+}
+
+func runMoseAgainstAgents(ctx context.Context, cli *dockerclient.Client, id string, binPath string, agents []string) {
+	execID, err := cli.ContainerExecCreate(ctx,
+		id,
+		types.ExecConfig{
+			AttachStderr: true,
+			AttachStdin:  true,
+			AttachStdout: true,
+			Cmd:          append([]string{binPath, "-n"}, strings.Join(agents, " ")),
+			Tty:          true,
+			Detach:       false,
+		},
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	log.Debug().Msgf("Running container exec and attach for container ID %v", execID.ID)
+	hj, err := cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{Detach: false, Tty: true})
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	if _, err = io.Copy(os.Stdout, hj.Reader); err != nil {
+		hj.Close()
 		log.Fatal().Err(err).Msg("")
 	}
-
 	hj.Close()
 }
 
-func removeContainer(cli *client.Client, id string) {
+func removeContainer(cli *dockerclient.Client, id string) {
 	ctx := context.Background()
 	timeout, _ := time.ParseDuration("10s")
 	err := cli.ContainerStop(ctx, id, &timeout)
@@ -299,10 +298,10 @@ func removeContainer(cli *client.Client, id string) {
 	}
 }
 
-func monitor(cli *client.Client, id string) {
+func monitor(cli *dockerclient.Client, id string) {
 	cleanupDone := make(chan struct{})
 	signal.Notify(signalChan, os.Interrupt)
-	go func(cli *client.Client, id string) {
+	go func(cli *dockerclient.Client, id string) {
 		<-signalChan
 		log.Log().Msg("\nReceived an interrupt, stopping services...")
 		removeContainer(cli, id)
@@ -328,13 +327,15 @@ func generateKnife() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	defer s.Close()
 
 	dat := new(strings.Builder)
 	_, err = io.Copy(dat, s)
-
 	if err != nil {
+		_ = s.Close()
 		log.Fatal().Err(err).Msg("")
+	}
+	if err := s.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing knife template")
 	}
 
 	t, err := template.New("knife").Parse(dat.String())
@@ -344,24 +345,38 @@ func generateKnife() {
 	}
 
 	f, err := os.Create("dockerfiles/knife.rb")
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	err = t.Execute(f, knifeArgs)
-
 	if err != nil {
+		_ = f.Close()
 		log.Fatal().Err(err).Msg("")
 	}
+	if err := f.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed closing knife.rb")
+	}
+}
 
-	f.Close()
+func newDockerClient(ctx context.Context) (*dockerclient.Client, error) {
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
+	if err != nil {
+		return nil, err
+	}
+	cli.NegotiateAPIVersion(ctx)
+	if _, err := cli.Ping(ctx); err != nil {
+		_ = cli.Close()
+		return nil, err
+	}
+	return cli, nil
 }
 
 // SetupChefWorkstationContainer will configure and stand up a chef workstation container that MOSE can use
 func SetupChefWorkstationContainer(input userinput.UserInput) {
 	userInput = input
 	signalChan = make(chan os.Signal, 1)
+	ctx := context.Background()
 
 	log.Debug().Msgf("Creating exfil endpoint at %v:%v", userInput.LocalIP, userInput.ExfilPort)
 	log.Debug().Msgf("Current orgname: %s", userInput.TargetOrgName)
@@ -369,26 +384,31 @@ func SetupChefWorkstationContainer(input userinput.UserInput) {
 	CreateUploadRoute(userInput)
 	log.Info().Msgf("Target organization name: %s", userInput.TargetOrgName)
 	generateKnife()
-	cli, err := client.NewClientWithOpts(client.WithVersion("1.37"))
+	cli, err := newDockerClient(ctx)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not get docker client")
 	}
+	defer func() {
+		if err := cli.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close docker client")
+		}
+	}()
 	log.Debug().Msg("Building Workstation container, please wait...")
 
-	build(cli)
+	build(ctx, cli)
 
 	log.Debug().Msg("Starting Workstation container, please wait...")
-	id := run(cli)
+	id := run(ctx, cli)
 
 	go monitor(cli, id)
 
 	log.Debug().Msg("Copying keys and relevant resources to workstation container, please wait...")
 
-	copyToDocker(cli, id)
+	copyToDocker(ctx, cli, id)
 	log.Debug().Msg("Running MOSE in Workstation container, please wait...")
 
-	runMoseInContainer(cli, id, userInput.OSTarget)
+	runMoseInContainer(ctx, cli, id, userInput.OSTarget)
 
 	log.Debug().Msg("Running MOSE in Workstation container, please wait...")
 

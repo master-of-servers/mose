@@ -77,7 +77,7 @@ func singleFile(h http.Handler) http.Handler {
 
 // StartServer stands up a web server that can be used to serve files
 func StartServer(port int, webDir string, ssl bool, cert string, key string, waitTime time.Duration, singleServe bool) *http.Server {
-	fileUploaded = make(chan bool)
+	fileUploaded = make(chan bool, 1)
 	srv := &http.Server{Addr: ":" + strconv.Itoa(port)}
 
 	fs := http.FileServer(http.Dir(webDir))
@@ -98,12 +98,11 @@ func StartServer(port int, webDir string, ssl bool, cert string, key string, wai
 		}
 	}()
 	if singleServe {
-
 		select {
 		case <-fileUploaded:
-			break
+			// single file served
 		case <-time.After(waitTime):
-			break
+			// timeout reached
 		}
 	} else {
 		time.Sleep(waitTime)

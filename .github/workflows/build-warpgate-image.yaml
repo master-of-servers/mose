@@ -1,0 +1,387 @@
+---
+name: Build and Push Warpgate Image
+on:
+  merge_group:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'warpgate.yaml'
+      - 'Dockerfile'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - '.github/workflows/build-warpgate-image.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'warpgate.yaml'
+      - 'Dockerfile'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - '.github/workflows/build-warpgate-image.yaml'
+  workflow_dispatch:
+
+# Required for OIDC and pushing to GHCR
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+
+concurrency:
+  cancel-in-progress: true
+  group: "${{ github.workflow }}-${{ github.ref }}"
+
+env:
+  GO_VERSION: "1.25.5"
+  TASK_VERSION: "3.38.0"
+  TASK_X_REMOTE_TASKFILES: 1
+
+jobs:
+  build-images:
+    name: Build warpgate (${{ matrix.arch }})
+    if: github.event_name != 'pull_request'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+      fail-fast: false
+      max-parallel: 2
+    steps:
+      - name: Checkout git repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0  # Fetch all history and tags for version detection
+
+      - name: Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Verify Go Installation and Add to PATH
+        run: |
+          which go
+          go version
+          GOROOT_BIN="$(go env GOROOT)/bin"
+          GOPATH_BIN="$(go env GOPATH)/bin"
+          {
+            echo "$GOROOT_BIN"
+            echo "$GOPATH_BIN"
+          } >> "$GITHUB_PATH"
+
+          # Set XDG directories and ensure they exist
+          USER_ID="$(id -u)"
+          export XDG_RUNTIME_DIR="/run/user/$USER_ID"
+          export XDG_CONFIG_HOME="$HOME/.config"
+          export XDG_DATA_HOME="$HOME/.local/share"
+
+          # Create directories if they don't exist
+          mkdir -p "$XDG_CONFIG_HOME"
+          mkdir -p "$XDG_DATA_HOME"
+
+          {
+            echo "XDG_RUNTIME_DIR=/run/user/$USER_ID"
+            echo "XDG_CONFIG_HOME=$HOME/.config"
+            echo "XDG_DATA_HOME=$HOME/.local/share"
+          } >> "$GITHUB_ENV"
+
+      - name: Install Task
+        run: |
+          sudo sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin v${{ env.TASK_VERSION }}
+          task --version
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgpgme-dev libbtrfs-dev
+
+      - name: Login to GitHub Container Registry (Docker)
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+
+      - name: Build Warpgate Binary
+        run: |
+          # Build warpgate binary first
+          task -y go:build
+
+          # Install to user directory
+          mkdir -p "$HOME/.local/bin"
+          cp warpgate "$HOME/.local/bin/warpgate"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          # Verify installation
+          export PATH="$HOME/.local/bin:$PATH"
+          which warpgate
+          warpgate version
+
+      - name: Configure Warpgate
+        run: |
+          # Initialize warpgate config
+          warpgate config init
+
+          # Configure warpgate with default settings
+          cat > ~/.config/warpgate/config.yaml <<EOF
+          container:
+              defaultbaseimage: ubuntu
+              defaultbaseversion: latest
+              defaultplatform: linux/amd64
+              defaultplatforms:
+                  - linux/amd64
+                  - linux/arm64
+          EOF
+
+          echo "Warpgate configuration:"
+          cat ~/.config/warpgate/config.yaml
+
+      - name: Set up Docker Buildx
+        run: |
+          # Create and bootstrap a BuildKit builder for warpgate
+          docker buildx create --name warpgate --driver docker-container --bootstrap --use
+          docker buildx inspect warpgate
+
+          # Verify the builder container is running and accessible
+          docker ps | grep buildx_buildkit_warpgate0 || {
+            echo "ERROR: BuildKit builder container not found"
+            docker ps
+            exit 1
+          }
+
+      - name: Validate warpgate.yaml configuration
+        run: |
+          # Verify warpgate.yaml exists
+          if [ ! -f "warpgate.yaml" ]; then
+            echo "ERROR: warpgate.yaml not found in repository root"
+            exit 1
+          fi
+
+          echo "Warpgate configuration found:"
+          cat warpgate.yaml
+
+      - name: Build ${{ matrix.arch }} Image
+        run: |
+          # Build for single architecture only using BuildKit with cache
+          # Skip push in merge queue due to token permission restrictions
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "Running in merge queue - building without push"
+            warpgate build warpgate.yaml \
+              --arch ${{ matrix.arch }} \
+              --registry ghcr.io/cowdogmoo \
+              --verbose \
+              --cache-from type=registry,ref=ghcr.io/cowdogmoo/warpgate:buildcache-${{ matrix.arch }}
+          else
+            echo "Building and pushing to registry"
+            warpgate build warpgate.yaml \
+              --arch ${{ matrix.arch }} \
+              --push \
+              --registry ghcr.io/cowdogmoo \
+              --save-digests \
+              --digest-dir "$GITHUB_WORKSPACE" \
+              --verbose \
+              --cache-from type=registry,ref=ghcr.io/cowdogmoo/warpgate:buildcache-${{ matrix.arch }} \
+              --cache-to type=registry,ref=ghcr.io/cowdogmoo/warpgate:buildcache-${{ matrix.arch }},mode=max
+
+            # Check if the specific digest file exists
+            if [ -f "$GITHUB_WORKSPACE/digest-warpgate-${{ matrix.arch }}.txt" ]; then
+              echo "Digest file found! Contents:"
+              cat "$GITHUB_WORKSPACE/digest-warpgate-${{ matrix.arch }}.txt"
+            else
+              echo "ERROR: Digest file was not created"
+              exit 1
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload digest
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: digests-warpgate-${{ matrix.arch }}
+          path: ${{ github.workspace }}/digest-warpgate-${{ matrix.arch }}.txt
+          retention-days: 1
+
+  merge-manifests:
+    name: Create multi-arch manifest for warpgate
+    needs: build-images
+    if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout git repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0  # Fetch all history and tags for version detection
+
+      - name: Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Verify Go Installation and Add to PATH
+        run: |
+          which go
+          go version
+          GOROOT_BIN="$(go env GOROOT)/bin"
+          GOPATH_BIN="$(go env GOPATH)/bin"
+          {
+            echo "$GOROOT_BIN"
+            echo "$GOPATH_BIN"
+          } >> "$GITHUB_PATH"
+
+          # Set XDG directories and ensure they exist
+          USER_ID="$(id -u)"
+          export XDG_RUNTIME_DIR="/run/user/$USER_ID"
+          export XDG_CONFIG_HOME="$HOME/.config"
+          export XDG_DATA_HOME="$HOME/.local/share"
+
+          # Create directories if they don't exist
+          mkdir -p "$XDG_CONFIG_HOME"
+          mkdir -p "$XDG_DATA_HOME"
+
+          {
+            echo "XDG_RUNTIME_DIR=/run/user/$USER_ID"
+            echo "XDG_CONFIG_HOME=$HOME/.config"
+            echo "XDG_DATA_HOME=$HOME/.local/share"
+          } >> "$GITHUB_ENV"
+
+      - name: Install Task
+        run: |
+          sudo sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin v${{ env.TASK_VERSION }}
+          task --version
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgpgme-dev libbtrfs-dev
+
+      - name: Build Warpgate Binary
+        run: |
+          # Build warpgate binary
+          task -y go:build
+
+          # Install to user directory
+          mkdir -p "$HOME/.local/bin"
+          cp warpgate "$HOME/.local/bin/warpgate"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          # Verify installation
+          export PATH="$HOME/.local/bin:$PATH"
+          which warpgate
+          warpgate version
+
+      - name: Download digests
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: digests-warpgate-*
+          path: .
+          merge-multiple: true
+
+      - name: List downloaded digest files
+        run: |
+          echo "Current directory: $PWD"
+          echo "Files in current directory:"
+          ls -la
+          echo ""
+          echo "Digest files:"
+          ls -la digest-*.txt || echo "No digest files found"
+
+      - name: Verify digest files
+        run: |
+          # Verify digest files for warpgate exist
+          echo "Verifying digest files for warpgate"
+
+          for file in digest-warpgate-*.txt; do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Expected digest file not found: $file"
+              ls -la
+              exit 1
+            fi
+
+            # Verify digest format (sha256:hex)
+            if ! grep -qE '^sha256:[a-f0-9]{64}$' "$file"; then
+              echo "ERROR: Invalid digest format in $file:"
+              cat "$file"
+              exit 1
+            fi
+
+            echo "Verified digest file: $file"
+            cat "$file"
+          done
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        run: |
+          # Create and bootstrap a BuildKit builder for warpgate
+          docker buildx create --name warpgate --driver docker-container --bootstrap --use
+          docker buildx inspect warpgate
+
+          # Verify the builder container is running and accessible
+          docker ps | grep buildx_buildkit_warpgate0 || {
+            echo "ERROR: BuildKit builder container not found"
+            docker ps
+            exit 1
+          }
+
+      - name: Create multi-arch manifest
+        run: |
+          warpgate manifests create \
+            --name warpgate \
+            --registry ghcr.io \
+            --namespace cowdogmoo \
+            --tag latest \
+            --digest-dir .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify multi-arch manifest
+        run: |
+          docker buildx imagetools inspect ghcr.io/cowdogmoo/warpgate:latest
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-images, merge-manifests]
+    if: always()
+    steps:
+      - name: Check build results
+        run: |
+          if [ "${{ needs.build-images.result }}" != "success" ] && [ "${{ needs.build-images.result }}" != "skipped" ]; then
+            echo "::error::Image build failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.merge-manifests.result }}" != "success" ] && [ "${{ needs.merge-manifests.result }}" != "skipped" ]; then
+            echo "::error::Manifest merge failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.build-images.result }}" == "skipped" ]; then
+            echo "Build was skipped (likely a PR)"
+          else
+            echo "✓ Warpgate image build and manifest merge completed successfully"
+          fi

@@ -1,3 +1,4 @@
+---
 AnsibleBackupLoc: ""
 ChefClientKey: "keys/admin.pem"
 ChefNodeName: "admin"
