@@ -23,7 +23,7 @@ concurrency:
 
 env:
   DEBIAN_FRONTEND: noninteractive
-  GO_VERSION: 1.25.5
+  GO_VERSION: 1.25.6
   PYTHON_VERSION: 3.13.3
   TASK_VERSION: 3.45.5
   TASK_X_REMOTE_TASKFILES: 1
